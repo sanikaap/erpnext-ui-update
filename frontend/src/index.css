@@ -114,8 +114,8 @@
   --nav-bg-1: #0f3b3d;
   --nav-bg-2: #123f41;
   --nav-border: #1c4c4e;
-  --nav-fg: #e5f0ef;
-  --nav-muted: #c4d9d7;
+  --nav-fg: #f5f5f5;
+  --nav-muted: #f5f5f5;
   --nav-subtle: #8fb0ae;
   --nav-hover: rgba(255, 255, 255, .06);
   --nav-active-bg: #17565a;
@@ -282,8 +282,8 @@
   --nav-bg-1: #0c3133;
   --nav-bg-2: #0f3638;
   --nav-border: #1a4446;
-  --nav-fg: #e5f0ef;
-  --nav-muted: #c4d9d7;
+  --nav-fg: #f5f5f5;
+  --nav-muted: #f5f5f5;
   --nav-subtle: #8fb0ae;
   --nav-hover: rgba(255, 255, 255, .05);
   --nav-active-bg: #155054;
