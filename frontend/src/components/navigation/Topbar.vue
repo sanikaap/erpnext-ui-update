@@ -133,7 +133,8 @@ async function logout() {
 .crumb { display: inline-flex; min-width: 2.5em; flex: 0 1 auto; align-items: center; gap: 6px; color: var(--muted-foreground); white-space: nowrap; }
 .crumb-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .crumb--current { min-width: 0; flex-shrink: 0; max-width: 70%; }
-a.crumb { border-radius: var(--radius-sm); transition: color var(--dur-fast) var(--ease); }
+a.crumb { border-radius: var(--radius-sm); text-underline-offset: 3px; transition: color var(--dur-fast) var(--ease); }
+a.crumb:hover .crumb-label { text-decoration: underline; }
 a.crumb:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
 a.crumb:hover { color: var(--foreground); }
 .crumb--current { color: var(--foreground); font-weight: 600; }

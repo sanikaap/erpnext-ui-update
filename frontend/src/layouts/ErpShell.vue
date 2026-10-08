@@ -20,7 +20,11 @@ watch(() => route.fullPath, () => { layout.mobileSidebarOpen = false; });
     <Transition name="fade"><div v-if="layout.mobileSidebarOpen" class="mobile-scrim" @click="layout.mobileSidebarOpen = false" /></Transition>
     <div class="main-column">
       <Topbar @toggle-menu="layout.mobileSidebarOpen = !layout.mobileSidebarOpen" />
-      <main class="page-body"><RouterView :key="route.name === 'document-detail' ? undefined : route.path" /></main>
+      <main class="page-body">
+        <RouterView v-slot="{ Component }">
+          <Transition name="route-fade"><component :is="Component" :key="route.name === 'document-detail' ? undefined : route.path" /></Transition>
+        </RouterView>
+      </main>
     </div>
     <ToastHost />
     <ConfirmHost />

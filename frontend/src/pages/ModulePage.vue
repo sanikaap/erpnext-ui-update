@@ -188,7 +188,7 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
 /* KPI strip */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .kpi { display: flex; min-width: 0; flex-direction: column; gap: 4px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); transition: border-color .15s, box-shadow .15s; }
-.kpi--link:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+.kpi--link:hover { border-color: var(--border-strong); }
 .kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .kpi-label { overflow: hidden; color: var(--muted-foreground); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .kpi-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: currentColor; }
@@ -242,7 +242,7 @@ a.progress-label:hover { color: var(--primary); text-decoration: underline; }
 .browse-title { color: var(--subtle-foreground); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .browse-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
 .browse-card { display: flex; min-width: 0; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
-.browse-card:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--border)); background: color-mix(in srgb, var(--c) 5%, var(--surface)); }
+.browse-card:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--border)); }
 .browse-card:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
 .browse-icon { display: grid; width: 32px; height: 32px; flex: none; place-items: center; color: var(--c); border-radius: 9px; background: color-mix(in srgb, var(--c) 13%, transparent); }
 .browse-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; line-height: 1.3; }

@@ -79,7 +79,7 @@ const groups = computed(() => {
 .group-title { color: color-mix(in srgb, var(--c) 70%, var(--muted-foreground)); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .report-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
 .report-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); transition: border-color .15s, box-shadow .15s; }
-.report-card:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--border)); box-shadow: var(--shadow-md); }
+.report-card:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--border)); }
 .report-icon { display: grid; width: 32px; height: 32px; flex: none; place-items: center; color: var(--c); border-radius: 9px; background: color-mix(in srgb, var(--c) 12%, transparent); }
 .report-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 .report-copy strong { overflow: hidden; color: var(--foreground); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }

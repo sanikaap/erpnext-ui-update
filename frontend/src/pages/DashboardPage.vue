@@ -365,7 +365,7 @@ const greeting = computed(() => {
 .shortcut-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .shortcut { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
 .shortcut:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
-.shortcut:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--border)); background: color-mix(in srgb, var(--c) 6%, var(--surface)); }
+.shortcut:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--border)); }
 .shortcut-icon { display: grid; width: 32px; height: 32px; flex: none; place-items: center; color: var(--c); border-radius: 9px; background: color-mix(in srgb, var(--c) 13%, transparent); }
 .shortcut-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; line-height: 1.3; }
 .shortcut-copy strong { overflow: hidden; color: var(--foreground); font-size: 12.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }

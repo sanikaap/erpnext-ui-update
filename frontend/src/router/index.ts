@@ -23,6 +23,19 @@ const documentRoutes = Object.keys(documentConfigs).map((path) => ({
 }));
 const redirects = Object.entries(legacyRedirects).map(([path, redirect]) => ({ path, redirect }));
 
+/** Resolves to `top` as soon as the document can scroll that far (or after ~1.5s). */
+function restoreScroll(top: number) {
+  return new Promise<{ top: number }>((resolve) => {
+    const started = performance.now();
+    const check = () => {
+      const reachable = document.documentElement.scrollHeight - window.innerHeight >= top;
+      if (reachable || performance.now() - started > 1500) resolve({ top });
+      else requestAnimationFrame(check);
+    };
+    check();
+  });
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -41,7 +54,12 @@ const router = createRouter({
     { path: '/profile', component: ProfilePage },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
-  scrollBehavior: (to, from) => (to.path === from.path ? undefined : { top: 0 }),
+  scrollBehavior: (to, from, savedPosition) => {
+    // Back/forward: return to where the viewer was, once the page has grown tall enough
+    // (lists load asynchronously). New pages start at the top.
+    if (savedPosition) return restoreScroll(savedPosition.top);
+    return to.path === from.path ? undefined : { top: 0 };
+  },
 });
 
 router.beforeEach(authGuard);

@@ -168,7 +168,7 @@ function validate() {
 
 async function save() {
   if (!editable.value || busy.value || !validate()) return;
-  const outcome = await run('Save', () => documentApi.save<FrappeDocument>(payload()), isNew.value ? `${doctype.value} created` : 'Changes saved');
+  const outcome = await run('Save', () => documentApi.save<FrappeDocument>(payload()), isNew.value ? `${doctype.value} created` : 'Saved');
   if (!outcome.ok) return;
   const saved = outcome.result;
   snapshot.value = '';

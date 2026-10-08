@@ -44,7 +44,7 @@ defineProps<{ metric: Metric }>();
 </template>
 
 <style scoped>
-.metric-card { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 16px 18px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+.metric-card { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 16px 18px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); transition: border-color var(--dur-fast) var(--ease); }
 .metric-card--link:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
 .metric-card::before { position: absolute; inset: 0 0 auto; height: 3px; content: ''; opacity: .9; }
 .metric-card--violet::before { background: linear-gradient(90deg, var(--primary), transparent); }
@@ -53,7 +53,7 @@ defineProps<{ metric: Metric }>();
 .metric-card--blue::before { background: linear-gradient(90deg, var(--info), transparent); }
 .metric-card--amber::before { background: linear-gradient(90deg, var(--warning), transparent); }
 .metric-card--rose::before { background: linear-gradient(90deg, var(--danger), transparent); }
-.metric-card--link:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.metric-card--link:hover { border-color: var(--border-strong); }
 .metric-top { display: flex; align-items: center; gap: 10px; }
 .metric-icon { display: grid; width: 34px; height: 34px; flex: none; place-items: center; border-radius: 10px; }
 .metric-label { color: var(--muted-foreground); font-size: 12.5px; font-weight: 500; }
