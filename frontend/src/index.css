@@ -1,0 +1,356 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+/* ============================================================
+   Design tokens
+   Light is the default; the theme store adds `.dark` to <html>.
+   Components use only these semantic names.
+
+   Color roles:
+     violet  (--primary)   primary actions, active navigation, focus
+     emerald (--secondary) positive states, secondary emphasis
+     cyan/blue (--accent, --info) links, informational, selected data
+     amber   (--warning)   caution
+     red     (--danger)    destructive / error
+   Module hues (--mod-*) tint the sidebar and module icons only.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces: cool lavender-tinted neutrals rather than flat grey. */
+  --background: #f5f4fa;
+  --background-glow: radial-gradient(1200px 520px at 100% -10%, rgba(124, 58, 237, .07), transparent 60%),
+    radial-gradient(900px 480px at -10% 110%, rgba(16, 185, 129, .06), transparent 60%);
+  --foreground: #1a1631;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-tint: #faf9fe;
+  --muted: #f1eff8;
+  --muted-foreground: #565170;
+  --subtle-foreground: #8a85a3;
+  --border: #e7e4f1;
+  --border-strong: #d6d1e6;
+  --input-background: #ffffff;
+  --readonly-background: #f6f5fb;
+
+  --primary: #7c3aed;
+  --primary-hover: #8b5cf6;
+  --primary-strong: #6d28d9;
+  --primary-foreground: #ffffff;
+  --primary-soft: rgba(124, 58, 237, .09);
+  --primary-softer: rgba(124, 58, 237, .05);
+  --primary-soft-foreground: #6d28d9;
+  --primary-gradient: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 55%, #a855f7 100%);
+
+  --secondary: #059669;
+  --secondary-hover: #10b981;
+  --secondary-foreground: #ffffff;
+  --secondary-soft: rgba(5, 150, 105, .1);
+  --secondary-soft-foreground: #047857;
+
+  --accent: #0891b2;
+  --accent-soft: rgba(8, 145, 178, .1);
+  --accent-soft-foreground: #0e7490;
+
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #b45309;
+  --warning-soft: #fef3c7;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --info: #1d4ed8;
+  --info-soft: #e0e9ff;
+
+  /* Chart series: one coherent palette shared by every chart. */
+  --chart-1: #7c3aed;
+  --chart-2: #10b981;
+  --chart-3: #06b6d4;
+  --chart-4: #f59e0b;
+  --chart-5: #c4b5fd;
+  --chart-6: #3b82f6;
+  --chart-track: #eeebf7;
+
+  /* Module hues */
+  --mod-crm: #db2777;
+  --mod-selling: #7c3aed;
+  --mod-buying: #2563eb;
+  --mod-accounts: #059669;
+  --mod-stock: #d97706;
+  --mod-manufacturing: #0891b2;
+  --mod-projects: #4f46e5;
+  --mod-assets: #0d9488;
+  --mod-support: #ea580c;
+  --mod-quality: #16a34a;
+  --mod-setup: #64748b;
+
+  /* Navigation: the NGO Impact Console's dark-teal rail, used for both sidebar levels. */
+  /* Solid surfaces only — no translucency or blur. */
+  --nav-bg-1: #0c3335;
+  --nav-bg-2: #0f3b3d;
+  --nav-border: #1d4f51;
+  --nav-fg: #e6f1f0;
+  --nav-muted: #b7d0ce;
+  --nav-subtle: #7fa3a0;
+  --nav-hover: #144749;
+  --nav-active-bg: #17565a;
+  --nav-active-fg: #ffffff;
+  --nav-accent: #5fd0c8;
+  --nav-input: #0a2c2e;
+
+  --ring: rgba(124, 58, 237, .4);
+  --overlay: rgba(26, 22, 49, .38);
+  --shadow-sm: 0 1px 2px rgba(40, 24, 90, .05);
+  --shadow-md: 0 1px 2px rgba(40, 24, 90, .05), 0 4px 14px -4px rgba(40, 24, 90, .08);
+  --shadow-lg: 0 18px 40px -16px rgba(40, 24, 90, .28);
+  --shadow-primary: 0 6px 16px -6px rgba(124, 58, 237, .55);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  --topbar-height: 60px;
+  --sidebar-width: 264px;
+  --sidebar-collapsed-width: 68px;
+
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* Deep navy/plum surfaces — never plain black. */
+  --background: #0c0a1a;
+  --background-glow: radial-gradient(1200px 520px at 100% -10%, rgba(139, 92, 246, .14), transparent 60%),
+    radial-gradient(900px 480px at -10% 110%, rgba(16, 185, 129, .08), transparent 60%);
+  --foreground: #eeeaff;
+  --surface: #141128;
+  --surface-elevated: #1b1735;
+  --surface-tint: #17142e;
+  --muted: #211c3e;
+  --muted-foreground: #aea7cc;
+  --subtle-foreground: #7d7699;
+  --border: #29234a;
+  --border-strong: #3a3263;
+  --input-background: #110e24;
+  --readonly-background: #18152f;
+
+  --primary: #8b5cf6;
+  --primary-hover: #a78bfa;
+  --primary-strong: #7c3aed;
+  --primary-foreground: #ffffff;
+  --primary-soft: rgba(139, 92, 246, .17);
+  --primary-softer: rgba(139, 92, 246, .09);
+  --primary-soft-foreground: #c4b5fd;
+  --primary-gradient: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 55%, #a855f7 100%);
+
+  --secondary: #10b981;
+  --secondary-hover: #34d399;
+  --secondary-foreground: #04120c;
+  --secondary-soft: rgba(16, 185, 129, .15);
+  --secondary-soft-foreground: #6ee7b7;
+
+  --accent: #22d3ee;
+  --accent-soft: rgba(34, 211, 238, .13);
+  --accent-soft-foreground: #67e8f9;
+
+  --success: #4ade80;
+  --success-soft: rgba(34, 197, 94, .15);
+  --warning: #fbbf24;
+  --warning-soft: rgba(245, 158, 11, .15);
+  --danger: #f87171;
+  --danger-soft: rgba(239, 68, 68, .15);
+  --info: #93b4ff;
+  --info-soft: rgba(96, 140, 255, .15);
+
+  --chart-1: #a78bfa;
+  --chart-2: #34d399;
+  --chart-3: #22d3ee;
+  --chart-4: #fbbf24;
+  --chart-5: #5b4a9e;
+  --chart-6: #60a5fa;
+  --chart-track: #251f45;
+
+  --mod-crm: #f472b6;
+  --mod-selling: #a78bfa;
+  --mod-buying: #60a5fa;
+  --mod-accounts: #34d399;
+  --mod-stock: #fbbf24;
+  --mod-manufacturing: #22d3ee;
+  --mod-projects: #818cf8;
+  --mod-assets: #2dd4bf;
+  --mod-support: #fb923c;
+  --mod-quality: #4ade80;
+  --mod-setup: #94a3b8;
+
+  --nav-bg-1: #081312;
+  --nav-bg-2: #0c1b1a;
+  --nav-border: #182b29;
+  --nav-fg: #dbe8e6;
+  --nav-muted: #a3bcba;
+  --nav-subtle: #6e8c8a;
+  --nav-hover: #11221f;
+  --nav-active-bg: #15332f;
+  --nav-active-fg: #ffffff;
+  --nav-accent: #4fb8b4;
+  --nav-input: #060f0e;
+
+  --ring: rgba(167, 139, 250, .6);
+  --overlay: rgba(5, 3, 15, .65);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .35);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, .35), 0 6px 18px -6px rgba(0, 0, 0, .5);
+  --shadow-lg: 0 20px 48px -16px rgba(0, 0, 0, .75);
+  --shadow-primary: 0 8px 20px -8px rgba(139, 92, 246, .7);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+* { box-sizing: border-box; }
+html { min-width: 320px; background: var(--background); }
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100dvh;
+  background: var(--background-glow), var(--background);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, p { margin: 0; }
+::selection { background: var(--primary-soft); color: var(--foreground); }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+/* ============================================================
+   Shared typography & page structure
+   Scale: page 22 · section 14 · card 14 · body 13 · label 12 · helper 11.5
+   ============================================================ */
+
+.eyebrow {
+  color: var(--subtle-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.muted { color: var(--muted-foreground); }
+.mono { font-family: var(--font-mono); }
+.tabular { font-variant-numeric: tabular-nums; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.page { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.page--narrow { max-width: 960px; }
+.page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.page-header > div:first-child { min-width: 0; }
+.page-title { margin-top: 4px; color: var(--foreground); font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.25; overflow-wrap: anywhere; }
+.page-subtitle { margin-top: 3px; color: var(--muted-foreground); font-size: 13px; }
+.page-actions { display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 8px; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding: 0; color: var(--muted-foreground); border: 0; background: none; font-size: 12px; font-weight: 500; }
+.back-link:hover { color: var(--primary); }
+
+@media (max-width: 700px) {
+  .page-header { align-items: flex-start; flex-direction: column; }
+  .page-title { font-size: 19px; }
+}
+
+/* ============================================================
+   Tones & monograms
+   ============================================================ */
+
+.tone-violet { color: var(--primary-soft-foreground); background: var(--primary-soft); }
+.tone-green { color: var(--secondary-soft-foreground); background: var(--secondary-soft); }
+.tone-amber { color: var(--warning); background: var(--warning-soft); }
+.tone-rose { color: var(--danger); background: var(--danger-soft); }
+.tone-cyan { color: var(--accent-soft-foreground); background: var(--accent-soft); }
+.tone-blue { color: var(--info); background: var(--info-soft); }
+.tone-slate { color: var(--muted-foreground); background: var(--muted); }
+
+.monogram {
+  display: inline-grid; flex: none; place-items: center;
+  width: 28px; height: 28px; border-radius: 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: .02em;
+}
+.monogram--lg { width: 48px; height: 48px; border-radius: var(--radius-lg); font-size: 16px; }
+
+/* Shared form-control look (inputs, selects, textareas, comboboxes). */
+.control {
+  width: 100%; height: 36px; padding: 0 11px;
+  color: var(--foreground); border: 1px solid var(--border); border-radius: var(--radius-md); outline: 0;
+  background: var(--input-background); box-shadow: var(--shadow-sm); font-size: 13px;
+  transition: border-color .15s, box-shadow .15s, background-color .15s;
+}
+.control:hover:not(:disabled):not([readonly]) { border-color: var(--border-strong); }
+.control:focus, .control:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.control::placeholder { color: var(--subtle-foreground); }
+.control:disabled, .control[readonly] { cursor: default; color: var(--muted-foreground); background: var(--readonly-background); box-shadow: none; }
+.control--invalid { border-color: color-mix(in srgb, var(--danger) 60%, var(--border)); }
+.control--invalid:focus { box-shadow: 0 0 0 3px var(--danger-soft); }
+
+/* ============================================================
+   Motion
+   ============================================================ */
+
+.stagger-in { animation: stagger-in .28s var(--ease) both; }
+.delay-1 { animation-delay: .03s; } .delay-2 { animation-delay: .06s; } .delay-3 { animation-delay: .09s; } .delay-4 { animation-delay: .12s; }
+@keyframes stagger-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes skeleton { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; }
+.skeleton { display: block; border-radius: 4px; background: var(--muted); animation: skeleton 1.4s ease-in-out infinite; }
+
+.pop-enter-active, .pop-leave-active { transition: opacity .14s var(--ease), transform .14s var(--ease); }
+.pop-enter-from, .pop-leave-to { opacity: 0; transform: translateY(-4px) scale(.98); }
+.fade-enter-active, .fade-leave-active { transition: opacity .16s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* ============================================================
+   Toolbar buttons (list controls, filters, pagination)
+   ============================================================ */
+
+.tool-button {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
+  color: var(--foreground); border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--surface); box-shadow: var(--shadow-sm); font-size: 13px; font-weight: 500; white-space: nowrap;
+  transition: color .15s, border-color .15s, background-color .15s;
+}
+.tool-button svg { color: var(--subtle-foreground); }
+.tool-button:hover:not(:disabled) { border-color: var(--border-strong); background: var(--muted); }
+.tool-button:hover:not(:disabled) svg { color: var(--primary); }
+.tool-button:disabled { cursor: not-allowed; opacity: .45; }
+.tool-button--icon { width: 34px; justify-content: center; padding: 0; }
+.tool-button--active { color: var(--primary-soft-foreground); border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); background: var(--primary-soft); }
+.tool-button--active svg { color: var(--primary); }
+.tool-count { display: inline-grid; min-width: 18px; height: 18px; padding: 0 5px; place-items: center; color: #fff; border-radius: 999px; background: var(--primary); font-size: 10.5px; font-weight: 700; }
+.pop-title { margin-bottom: 8px; color: var(--subtle-foreground); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+
+/* Native selects share one chevron so every dropdown looks the same. */
+select.control {
+  appearance: none; padding-right: 30px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a85a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 9px center;
+}
+input[type=checkbox], input[type=radio] { accent-color: var(--primary); }
+
+/* Module hues on the dark navigation surface use their light variants in both themes. */
+.sidebar {
+  --mod-crm: #f9a8d4; --mod-selling: #c4b5fd; --mod-buying: #93c5fd; --mod-accounts: #6ee7b7;
+  --mod-stock: #fcd34d; --mod-manufacturing: #67e8f9; --mod-projects: #a5b4fc; --mod-assets: #5eead4;
+  --mod-support: #fdba74; --mod-quality: #86efac; --mod-setup: #cbd5e1;
+}
