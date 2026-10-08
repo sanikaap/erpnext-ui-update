@@ -17,6 +17,8 @@ export interface Metric {
   icon: Component;
   to?: string;
   loading?: boolean;
+  /** Next step shown instead of the hint when the value is empty (e.g. zero); also mutes the value. */
+  emptyHint?: string;
 }
 
 defineProps<{ metric: Metric }>();
@@ -28,12 +30,15 @@ defineProps<{ metric: Metric }>();
       <span :class="['metric-icon', `tone-${metric.tone}`]"><component :is="metric.icon" :size="17" /></span>
       <span class="metric-label">{{ metric.label }}</span>
     </div>
-    <div class="metric-value tabular"><span v-if="metric.loading" class="skeleton" style="width: 60%; height: 26px" /><template v-else>{{ metric.value }}</template></div>
+    <div :class="['metric-value tabular', { 'metric-value--empty': metric.emptyHint && !metric.loading }]"><span v-if="metric.loading" class="skeleton" style="width: 60%; height: 26px" /><template v-else>{{ metric.value }}</template></div>
     <div class="metric-footer">
+      <span v-if="metric.emptyHint && !metric.loading" class="metric-next">{{ metric.emptyHint }}</span>
+      <template v-else>
       <span v-if="metric.delta && !metric.loading" :class="['trend-pill', metric.trend === 'flat' || !metric.trend ? 'trend-pill--flat' : (metric.trend === 'up') === (metric.upIsGood ?? true) ? 'trend-pill--good' : 'trend-pill--bad']">
         <ArrowUpRight v-if="metric.trend === 'up'" :size="12" /><ArrowDownRight v-else-if="metric.trend === 'down'" :size="12" /><Minus v-else :size="12" />{{ metric.delta }}
       </span>
       <span v-if="metric.hint">{{ metric.hint }}</span>
+      </template>
     </div>
   </component>
 </template>
@@ -53,6 +58,8 @@ defineProps<{ metric: Metric }>();
 .metric-icon { display: grid; width: 34px; height: 34px; flex: none; place-items: center; border-radius: 10px; }
 .metric-label { color: var(--muted-foreground); font-size: 12.5px; font-weight: 500; }
 .metric-value { min-height: 30px; margin: 14px 0 8px; color: var(--foreground); font-size: 26px; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; }
+.metric-value--empty { color: var(--subtle-foreground); }
+.metric-next { color: var(--muted-foreground); }
 .metric-footer { font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 20px; color: var(--subtle-foreground); font-size: 12px; }
 .trend-pill { font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
 .trend-pill--good { color: var(--secondary-soft-foreground); background: var(--secondary-soft); }
