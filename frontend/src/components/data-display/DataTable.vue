@@ -29,7 +29,9 @@ const props = withDefaults(defineProps<{
    * area (capped to the viewport) so horizontal scrolling keeps working too.
    */
   stickyHeader?: boolean;
-}>(), { rows: () => [], loading: false, selectable: false, selected: () => [], sort: () => [], submittable: false, skeletonRows: 8, stickyHeader: false });
+  /** Row height: comfortable (default) or compact. */
+  density?: 'comfortable' | 'compact';
+}>(), { rows: () => [], loading: false, selectable: false, selected: () => [], sort: () => [], submittable: false, skeletonRows: 8, stickyHeader: false, density: 'comfortable' });
 
 const emit = defineEmits<{ rowClick: [row: FrappeDocument]; 'update:selected': [names: string[]]; 'update:sort': [sort: Sort[]] }>();
 
@@ -79,7 +81,7 @@ function image(row: FrappeDocument) {
 </script>
 
 <template>
-  <div :class="['table-wrap', { 'table-wrap--sticky': stickyHeader }]">
+  <div :class="['table-wrap', { 'table-wrap--sticky': stickyHeader, 'table-wrap--compact': density === 'compact' }]">
     <table :aria-busy="loading" data-testid="table-data">
       <thead>
         <tr>
@@ -156,6 +158,11 @@ table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: l
 th { position: sticky; top: 0; z-index: 1; height: 38px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: var(--text-xs); font-weight: 600; letter-spacing: .01em; white-space: nowrap; }
 td { height: 50px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); font-size: var(--text-base); font-variant-numeric: tabular-nums; white-space: nowrap; }
 tbody tr:last-child td { border-bottom: 0; }
+.table-wrap--compact th { height: 34px; }
+.table-wrap--compact td { height: 38px; }
+.table-wrap--compact .monogram { width: 22px; height: 22px; border-radius: 6px; font-size: 9.5px; }
+.table-wrap--compact .cell-image { width: 22px; height: 22px; border-radius: 6px; }
+.table-wrap--compact .cell-titles { flex-direction: row; align-items: baseline; gap: 8px; }
 .sort-button { display: inline-flex; align-items: center; gap: 4px; padding: 0; color: inherit; border: 0; background: none; font: inherit; }
 .sort-button:hover { color: var(--foreground); }
 .sort-button:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); border-radius: var(--radius-sm); }

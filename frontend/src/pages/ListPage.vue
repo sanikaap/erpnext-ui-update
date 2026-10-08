@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { ChevronLeft, ChevronRight, Download, Plus, RefreshCw, Search, Trash2, X } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Download, Plus, RefreshCw, Rows3, Rows4, Search, Trash2, X } from 'lucide-vue-next';
 import { useRoute, useRouter } from 'vue-router';
 import { documentConfigs, routeFilters } from '@/config/navigation';
 import { getModuleForPath } from '@/app/module-registry';
 import { useDocType } from '@/composables/useDocType';
 import { useDocuments, type DocumentQuery } from '@/composables/useDocuments';
+import { useStatusTabs } from '@/composables/useStatusTabs';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
 import { documentApi } from '@/services/document-api';
@@ -48,6 +49,10 @@ const columns = ref<DocumentListColumn[]>([]);
 const page = ref(1);
 const pageLength = ref(20);
 const selected = ref<string[]>([]);
+/** True once the viewer picked columns themselves; their choice then always wins over auto-hiding. */
+const columnsCustomised = ref(false);
+/** The viewer asked to see columns that are empty on this page anyway. */
+const showEmptyColumns = ref(false);
 
 const storageKey = computed(() => `erp-list-view:${route.path}`);
 const fieldMap = computed(() => new Map(metadata.value.map((field) => [field.fieldname, field])));
@@ -73,12 +78,15 @@ function defaultSort(): Sort[] {
 }
 
 function restoreView() {
-  let saved: { filters?: Filter[]; sort?: Sort[]; columns?: string[]; pageLength?: number } = {};
+  let saved: { filters?: Filter[]; sort?: Sort[]; columns?: string[]; pageLength?: number; customColumns?: boolean } = {};
   try { saved = JSON.parse(localStorage.getItem(storageKey.value) || '{}'); } catch { saved = {}; }
   const defaults = defaultColumns();
   const known = new Map([...defaults.map((column) => [column.fieldname, column] as const), ...metadata.value.map((field) => [field.fieldname, { fieldname: field.fieldname, label: field.label, fieldtype: field.fieldtype, options: field.options }] as const)]);
   const restored = (saved.columns ?? []).map((fieldname) => known.get(fieldname) ?? (['modified', 'creation', 'owner'].includes(fieldname) ? { fieldname, label: fieldname === 'owner' ? 'Created By' : fieldname === 'creation' ? 'Created' : 'Updated', fieldtype: 'Datetime' } : undefined)).filter(Boolean) as DocumentListColumn[];
-  columns.value = restored.length && restored[0].fieldname === 'name' ? restored : defaults;
+  const usesSaved = restored.length > 0 && restored[0].fieldname === 'name';
+  columns.value = usesSaved ? restored : defaults;
+  columnsCustomised.value = usesSaved && Boolean(saved.customColumns);
+  showEmptyColumns.value = false;
   filters.value = (saved.filters ?? []).filter((filter) => fieldMap.value.has(filter.fieldname) || ['name', 'modified', 'creation', 'owner'].includes(filter.fieldname));
   sort.value = saved.sort?.length ? saved.sort : defaultSort();
   pageLength.value = [20, 50, 100].includes(saved.pageLength ?? 0) ? saved.pageLength! : 20;
@@ -89,7 +97,7 @@ function restoreView() {
 
 function persistView() {
   try {
-    localStorage.setItem(storageKey.value, JSON.stringify({ filters: filters.value, sort: sort.value, columns: columns.value.map((column) => column.fieldname), pageLength: pageLength.value }));
+    localStorage.setItem(storageKey.value, JSON.stringify({ filters: filters.value, sort: sort.value, columns: columns.value.map((column) => column.fieldname), pageLength: pageLength.value, customColumns: columnsCustomised.value }));
   } catch { /* storage unavailable: the view lasts this visit */ }
 }
 
@@ -104,7 +112,7 @@ watch([meta, () => route.path], () => {
   ready.value = true;
 }, { immediate: true });
 
-watch([filters, sort, columns, pageLength], () => { if (ready.value) persistView(); }, { deep: true });
+watch([filters, sort, columns, pageLength, columnsCustomised], () => { if (ready.value) persistView(); }, { deep: true });
 watch([filters, search, pageLength], () => { page.value = 1; selected.value = []; }, { deep: true });
 
 // ---------- Query ----------
@@ -145,6 +153,44 @@ const query = computed<DocumentQuery>(() => ({
 }));
 
 const { rows, total, loading, error, forbidden, load } = useDocuments(query, ready);
+
+// ---------- Status tabs ----------
+const statusTabs = useStatusTabs({ doctype, fields: metadata, filters, fixedFilters, search, searchFields, enabled: ready });
+function refresh() {
+  void load();
+  void statusTabs.reloadCounts();
+}
+
+// ---------- Columns that are empty for every loaded row are hidden (unless the viewer chose them) ----------
+const ALWAYS_SHOWN = new Set(['name', '__status', 'status', 'modified', 'creation']);
+const isBlank = (value: unknown) => value === null || value === undefined || value === '';
+const emptyColumns = computed(() => {
+  if (!rows.value.length) return [];
+  return columns.value.filter((column, index) => index > 0 && !ALWAYS_SHOWN.has(column.fieldname) && column.fieldtype !== 'Check' && rows.value.every((row) => isBlank(row[column.fieldname])));
+});
+const hidingEmpty = computed(() => !columnsCustomised.value && !showEmptyColumns.value && emptyColumns.value.length > 0);
+const displayColumns = computed(() => {
+  if (!columns.value.length) return [{ fieldname: 'name', label: doctype.value }];
+  if (!hidingEmpty.value) return columns.value;
+  const hidden = new Set(emptyColumns.value.map((column) => column.fieldname));
+  return columns.value.filter((column) => !hidden.has(column.fieldname));
+});
+function chooseColumns(next: DocumentListColumn[]) {
+  columns.value = next;
+  columnsCustomised.value = true;
+}
+function resetColumns() {
+  columns.value = defaultColumns();
+  columnsCustomised.value = false;
+}
+
+// ---------- Density (per viewer, all lists) ----------
+const DENSITY_KEY = 'erp-list-density';
+const density = ref<'comfortable' | 'compact'>((() => { try { return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable'; } catch { return 'comfortable'; } })());
+function toggleDensity() {
+  density.value = density.value === 'compact' ? 'comfortable' : 'compact';
+  try { localStorage.setItem(DENSITY_KEY, density.value); } catch { /* storage unavailable: lasts this visit */ }
+}
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageLength.value)));
 const hasCriteria = computed(() => Boolean(search.value.trim() || filters.value.length));
 
@@ -180,7 +226,7 @@ async function deleteSelected() {
   selected.value = [];
   if (failed.length) toast.error(`${failed.length} of ${names.length} could not be deleted`, failed[0]);
   if (failed.length < names.length) toast.success(`${names.length - failed.length} deleted`);
-  void load();
+  refresh();
 }
 
 function exportCsv() {
@@ -225,6 +271,18 @@ function clearCriteria() {
     <section class="list-card">
       <ErrorState v-if="metaError" :kind="errorKind" :message="metaError" @retry="loadMeta" />
       <template v-else>
+        <nav v-if="ready && statusTabs.tabs.value.length" class="status-tabs" :aria-label="`${title} by status`">
+          <button
+            v-for="tab in statusTabs.tabs.value"
+            :key="tab.key"
+            type="button"
+            :class="['status-tab', { 'status-tab--active': statusTabs.activeKey.value === tab.key }]"
+            :aria-pressed="statusTabs.activeKey.value === tab.key"
+            @click="statusTabs.select(tab)"
+          >
+            {{ tab.label }}<span class="status-tab-count tabular">{{ tab.count === null ? '–' : tab.count.toLocaleString() }}</span>
+          </button>
+        </nav>
         <div class="table-tools">
           <label class="tool-search">
             <Search :size="14" />
@@ -235,8 +293,9 @@ function clearCriteria() {
           <div class="tool-actions">
             <FilterControl v-if="ready" v-model="filters" :fields="metadata" />
             <SortBy v-if="ready" v-model="sort" :fields="metadata" />
-            <ColumnSettings v-if="ready" v-model="columns" :fields="metadata" @reset="columns = defaultColumns()" />
-            <button type="button" class="tool-button tool-button--icon" aria-label="Refresh" title="Refresh" @click="load()"><RefreshCw :size="14" :class="{ spin: loading }" /></button>
+            <ColumnSettings v-if="ready" :model-value="columns" :fields="metadata" @update:model-value="chooseColumns" @reset="resetColumns" />
+            <button type="button" class="tool-button tool-button--icon" :aria-label="density === 'compact' ? 'Comfortable rows' : 'Compact rows'" :title="density === 'compact' ? 'Comfortable rows' : 'Compact rows'" :aria-pressed="density === 'compact'" @click="toggleDensity"><Rows4 v-if="density === 'compact'" :size="14" /><Rows3 v-else :size="14" /></button>
+            <button type="button" class="tool-button tool-button--icon" aria-label="Refresh" title="Refresh" @click="refresh()"><RefreshCw :size="14" :class="{ spin: loading }" /></button>
           </div>
         </div>
 
@@ -246,12 +305,12 @@ function clearCriteria() {
             {{ fieldMap.get(filter.fieldname)?.label || filter.fieldname }} <em>{{ filter.operator === 'like' ? 'contains' : filter.operator }}</em> {{ filter.value === 1 ? 'Yes' : filter.value === 0 ? 'No' : filter.value }}
             <button type="button" :aria-label="`Remove filter ${filter.fieldname}`" @click="filters = filters.filter((_, position) => position !== index)"><X :size="11" /></button>
           </span>
-          <button v-if="filters.length" type="button" class="clear-filters" @click="filters = []">Clear filters</button>
+          <button v-if="filters.length" type="button" class="clear-filters" @click="filters = []">Clear all</button>
         </div>
 
         <Transition name="fade">
-          <div v-if="selected.length" class="bulk-bar">
-            <strong>{{ selected.length }} selected</strong>
+          <div v-if="selected.length" class="bulk-bar" role="region" aria-label="Bulk actions">
+            <strong role="status">{{ selected.length }} selected</strong>
             <button type="button" class="bulk-link" @click="selected = []">Clear</button>
             <span class="bulk-spacer" />
             <BaseButton v-if="canExport" variant="quiet" size="sm" @click="exportCsv"><Download :size="14" />Export CSV</BaseButton>
@@ -264,7 +323,7 @@ function clearCriteria() {
           <DataTable
             v-model:selected="selected"
             v-model:sort="sort"
-            :columns="columns.length ? columns : [{ fieldname: 'name', label: doctype }]"
+            :columns="displayColumns"
             :rows="rows"
             :loading="loading || metaLoading"
             :selectable="canDelete || canExport"
@@ -273,6 +332,7 @@ function clearCriteria() {
             :submittable="Boolean(meta?.is_submittable)"
             :skeleton-rows="Math.min(pageLength, 10)"
             sticky-header
+            :density="density"
             @row-click="openRecord"
           />
         </template>
@@ -289,7 +349,14 @@ function clearCriteria() {
         ><BaseButton v-if="canCreate" variant="primary" size="sm" @click="createRecord"><Plus :size="14" />Create {{ doctype }}</BaseButton></EmptyState>
 
         <footer v-if="ready && total > 0" class="pagination">
-          <span class="tabular">{{ `${(page - 1) * pageLength + 1}–${Math.min(page * pageLength, total)} of ${total.toLocaleString()}` }}</span>
+          <span class="pagination-summary">
+            <span class="tabular">{{ `${(page - 1) * pageLength + 1}–${Math.min(page * pageLength, total)} of ${total.toLocaleString()}` }}</span>
+            <template v-if="!columnsCustomised && emptyColumns.length">
+              <span aria-hidden="true">·</span>
+              <span>{{ emptyColumns.length }} empty {{ emptyColumns.length === 1 ? 'column' : 'columns' }} {{ hidingEmpty ? 'hidden' : 'shown' }}</span>
+              <button type="button" class="link-button" @click="showEmptyColumns = !showEmptyColumns">{{ hidingEmpty ? 'Show' : 'Hide' }}</button>
+            </template>
+          </span>
           <div class="pagination-controls">
             <label class="page-size">Rows
               <select v-model.number="pageLength" class="control" aria-label="Rows per page"><option :value="20">20</option><option :value="50">50</option><option :value="100">100</option></select>
@@ -329,6 +396,19 @@ function clearCriteria() {
 .clear-filters { padding: 0 4px; color: var(--muted-foreground); border: 0; background: none; font-size: 12px; }
 .clear-filters:hover { color: var(--danger); }
 
+.status-tabs { display: flex; gap: 2px; overflow-x: auto; padding: 0 10px; border-bottom: 1px solid var(--border); scrollbar-width: none; }
+.status-tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: 7px; height: 42px; padding: 0 10px; color: var(--muted-foreground); border: 0; background: none; font-size: 13px; font-weight: 500; white-space: nowrap; transition: color var(--dur-fast) var(--ease); }
+.status-tab::after { position: absolute; right: 8px; bottom: -1px; left: 8px; height: 2px; content: ''; border-radius: 2px 2px 0 0; background: transparent; transition: background-color var(--dur-fast) var(--ease); }
+.status-tab:hover { color: var(--foreground); }
+.status-tab:focus-visible { outline: var(--focus-ring); outline-offset: -4px; border-radius: var(--radius-md); }
+.status-tab--active { color: var(--foreground); font-weight: 600; }
+.status-tab--active::after { background: var(--primary); }
+.status-tab-count { min-width: 20px; padding: 0 6px; color: var(--muted-foreground); border-radius: 999px; background: var(--muted); font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
+.status-tab--active .status-tab-count { color: var(--primary-soft-foreground); background: var(--primary-soft); }
+.pagination-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.link-button { padding: 0; color: var(--primary-soft-foreground); border: 0; background: none; font-size: inherit; font-weight: 600; }
+.link-button:hover { text-decoration: underline; }
+.link-button:focus-visible { outline: var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
 .bulk-bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border)); background: linear-gradient(90deg, var(--primary-soft), var(--secondary-soft)); }
 .bulk-bar strong { color: var(--primary-soft-foreground); font-size: 13px; }
 .bulk-link { padding: 0; color: var(--muted-foreground); border: 0; background: none; font-size: 12.5px; }
