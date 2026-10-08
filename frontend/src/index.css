@@ -409,6 +409,16 @@ h1, h2, h3, p { margin: 0; }
 }
 .monogram--lg { width: 48px; height: 48px; border-radius: var(--radius-lg); font-size: 16px; }
 
+/* KPI tiles: each tone gets its own hue (categorical slots + status), so a row of
+   tiles reads as distinct figures instead of one green block. */
+.kpi-tone-violet { --tone: var(--chart-6); }
+.kpi-tone-blue { --tone: var(--chart-3); }
+.kpi-tone-cyan { --tone: var(--chart-1); }
+.kpi-tone-green { --tone: var(--success); }
+.kpi-tone-amber { --tone: var(--chart-2); }
+.kpi-tone-rose { --tone: var(--danger); }
+.kpi-tone-slate { --tone: var(--chart-neutral); }
+
 /* Shared form-control look (inputs, selects, textareas, comboboxes). */
 .control {
   width: 100%; height: var(--control-height); padding: 0 12px;

@@ -23,7 +23,9 @@ const props = withDefaults(defineProps<{
   hideLegend?: boolean;
   /** Stack bar series into one column per label. */
   stacked?: boolean;
-}>(), { type: 'bar', height: 260, integer: false, hideLegend: false, stacked: false });
+  /** Single-series bars: one color token per category (labels carry identity). */
+  barColors?: string[];
+}>(), { type: 'bar', height: 260, integer: false, hideLegend: false, stacked: false, barColors: undefined });
 
 const chartEl = ref<HTMLElement | null>(null);
 const theme = useThemeStore();
@@ -94,7 +96,10 @@ function render() {
       boundaryGap: !isLine,
       axisLine: { show: true, lineStyle: { color: grid } },
       axisTick: { show: false },
-      axisLabel: { color: axis, fontSize: 11, margin: 10, hideOverlap: true },
+      // Category bars: show every label, wrapped to its column; time axes thin out instead.
+      axisLabel: isLine || props.labels.length > 12
+        ? { color: axis, fontSize: 11, margin: 10, hideOverlap: true }
+        : { color: axis, fontSize: 11, margin: 10, interval: 0, width: Math.max(48, chart.getWidth() / Math.max(1, props.labels.length) - 12), overflow: 'break', lineHeight: 13 },
     },
     yAxis: {
       type: 'value',
@@ -107,20 +112,23 @@ function render() {
     series: props.series.map((entry) => {
       const color = token(entry.color);
       if (!isLine) {
+        const fill = (base: string) => new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: base }, { offset: 1, color: alpha(base, .62) }]);
+        const perBar = props.barColors && props.series.length === 1;
         return {
-          name: entry.name, type: 'bar', data: entry.data, stack: props.stacked ? 'total' : undefined,
-          barMaxWidth: 18, barGap: '20%', barCategoryGap: '38%',
-          itemStyle: { color, borderRadius: props.stacked ? 0 : [4, 4, 0, 0] },
-          emphasis: { focus: 'series', itemStyle: { color } },
+          name: entry.name, type: 'bar', stack: props.stacked ? 'total' : undefined,
+          data: perBar ? entry.data.map((value, index) => ({ value, itemStyle: { color: fill(token(props.barColors![index] ?? entry.color)) } })) : entry.data,
+          barMaxWidth: perBar || props.stacked ? 34 : 18, barGap: '20%', barCategoryGap: '38%',
+          itemStyle: { color: fill(color), borderRadius: props.stacked ? 0 : [5, 5, 0, 0], borderColor: props.stacked ? surface : undefined, borderWidth: props.stacked ? 1 : 0 },
+          emphasis: { focus: 'series' },
         };
       }
       return {
         name: entry.name, type: 'line', data: entry.data,
         smooth: 0.3, smoothMonotone: 'x',
         symbol: 'circle', symbolSize: 8, showSymbol: false,
-        lineStyle: { color, width: 2 },
+        lineStyle: { color, width: 2.5, shadowColor: alpha(color, .35), shadowBlur: 8, shadowOffsetY: 4 },
         itemStyle: { color, borderColor: surface, borderWidth: 2 },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: alpha(color, .22) }, { offset: 1, color: alpha(color, 0) }]) },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: alpha(color, .32) }, { offset: 1, color: alpha(color, .02) }]) },
         emphasis: { focus: 'series' },
         endLabel: directLabels ? { show: true, color: text, fontSize: 11, fontWeight: 600, distance: 6, formatter: (params: { value: number }) => format(Number(params.value) || 0) } : undefined,
         labelLayout: directLabels ? { moveOverlap: 'shiftY' } : undefined,

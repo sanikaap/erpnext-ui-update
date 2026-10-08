@@ -11,10 +11,11 @@ import DonutGauge from '@/components/charts/DonutGauge.vue';
 import SegmentedBar from '@/components/charts/SegmentedBar.vue';
 import RankBars, { type RankRow } from '@/components/charts/RankBars.vue';
 import ChartPlaceholder from '@/components/charts/ChartPlaceholder.vue';
+import DonutChart from '@/components/charts/DonutChart.vue';
 import { useCurrentUser } from '@/composables/useCurrentUser';
 import { useSessionDefaults } from '@/composables/useSessionDefaults';
 import { useNavigation } from '@/composables/useNavigation';
-import { ngoOverview } from '@/ngo/overview';
+import { ngoOverview, lakh } from '@/ngo/overview';
 import { ORG } from '@/ngo/data';
 import { documentApi } from '@/services/document-api';
 import { getDocumentRouteForDocType } from '@/config/navigation';
@@ -116,7 +117,7 @@ function change(now: number, before: number): Pick<Metric, 'delta' | 'trend'> {
 
 const metrics = computed<Metric[]>(() => {
   const list: Metric[] = [];
-  if (invoices.value !== null || loading.value) list.push({ label: `Sales · last ${DAYS} days`, value: money(salesNow.value), ...change(salesNow.value, salesBefore.value), hint: 'vs previous period', tone: 'violet', icon: CircleDollarSign, to: getDocumentRouteForDocType('Sales Invoice'), loading: loading.value, emptyHint: salesNow.value ? undefined : 'Submit a sales invoice to start tracking', spark: invoices.value ? daily(invoices.value) : undefined, sparkColor: '--chart-1' });
+  if (invoices.value !== null || loading.value) list.push({ label: `Sales · last ${DAYS} days`, value: money(salesNow.value), ...change(salesNow.value, salesBefore.value), hint: 'vs previous period', tone: 'violet', icon: CircleDollarSign, to: getDocumentRouteForDocType('Sales Invoice'), loading: loading.value, emptyHint: salesNow.value ? undefined : 'Submit a sales invoice to start tracking', spark: invoices.value ? daily(invoices.value) : undefined });
   if (receivables.value !== null || loading.value) list.push({ label: 'Receivables outstanding', value: money(outstandingTotal.value), hint: counts.value.overdue ? `${counts.value.overdue} overdue` : `${receivables.value?.length ?? 0} invoices`, tone: counts.value.overdue ? 'rose' : 'cyan', icon: Clock3, to: '/accounts/accounts-receivable', loading: loading.value, emptyHint: outstandingTotal.value ? undefined : 'Nothing owed to you right now' });
   if (counts.value.openOrders !== null || loading.value) list.push({ label: 'Sales orders to fulfil', value: String(counts.value.openOrders ?? 0), hint: counts.value.lateDeliveries ? `${counts.value.lateDeliveries} past delivery date` : 'none late', tone: 'green', icon: ShoppingCart, to: getDocumentRouteForDocType('Sales Order'), loading: loading.value, emptyHint: counts.value.openOrders ? undefined : 'Create a sales order to fulfil' });
   if (counts.value.toReceive !== null || loading.value) list.push({ label: 'Purchase orders open', value: String(counts.value.toReceive ?? 0), hint: 'to receive or bill', tone: 'blue', icon: ShoppingBag, to: getDocumentRouteForDocType('Purchase Order'), loading: loading.value, emptyHint: counts.value.toReceive ? undefined : 'Raise a purchase order when you buy' });
@@ -205,7 +206,12 @@ const ngoModule = computed(() => modules.value.find((module) => module.key === '
 const ngoIcons = [PiggyBank, HandCoins, CircleDollarSign, HeartHandshake];
 const ngoMetrics = computed<Metric[]>(() => {
   if (!ngoModule.value) return [];
-  return (ngoOverview('ngo-projects')?.kpis ?? []).map((kpi, index) => ({ label: kpi.label, value: kpi.value, hint: kpi.hint, tone: kpi.tone, icon: ngoIcons[index % ngoIcons.length], to: ngoModule.value!.route }));
+  return (ngoOverview('ngo-projects')?.kpis ?? []).map((kpi, index) => ({ label: kpi.label, value: kpi.value, hint: kpi.hint, tone: kpi.tone, icon: ngoIcons[index % ngoIcons.length], to: ngoModule.value!.route, spark: kpi.spark }));
+});
+// Two headline NGO charts for the Overview, taken from the NGO Projects overview.
+const ngoPanels = computed(() => {
+  const panels = ngoModule.value ? ngoOverview('ngo-projects')?.panels ?? [] : [];
+  return { trend: panels.find((panel) => panel.kind === 'trend'), heads: panels.find((panel) => panel.kind === 'donut' && panel.title === 'Spend by budget head') };
 });
 
 const recentRows = computed(() => recent.value.map((row) => {
@@ -281,6 +287,14 @@ const greeting = computed(() => {
       <div class="metric-grid">
         <MetricCard v-for="metric in ngoMetrics" :key="metric.label" :metric="metric" />
       </div>
+      <div class="grid-2-1">
+        <PanelCard v-if="ngoPanels.trend && ngoPanels.trend.kind === 'trend'" :title="ngoPanels.trend.title" :eyebrow="ngoPanels.trend.note">
+          <TrendChart :labels="ngoPanels.trend.labels" :series="ngoPanels.trend.series" type="line" :height="240" :format-value="lakh" />
+        </PanelCard>
+        <PanelCard v-if="ngoPanels.heads && ngoPanels.heads.kind === 'donut'" :title="ngoPanels.heads.title" :eyebrow="ngoPanels.heads.note">
+          <DonutChart :segments="ngoPanels.heads.segments" :label="ngoPanels.heads.title" :center-label="ngoPanels.heads.centerLabel" :center-value="ngoPanels.heads.centerValue" :size="170" />
+        </PanelCard>
+      </div>
     </section>
 
     <section class="grid-2-1">
@@ -320,7 +334,7 @@ const greeting = computed(() => {
     <section class="grid-1-1">
       <PanelCard title="Top customers" :eyebrow="`By invoiced value, last ${DAYS} days`">
         <div v-if="loading" class="list-skeleton"><span v-for="index in 5" :key="index" class="skeleton" style="height: 40px; border-radius: 10px" /></div>
-        <RankBars v-else-if="topCustomers.length" :rows="topCustomers" label="Top customers by invoiced value" />
+        <RankBars v-else-if="topCustomers.length" :rows="topCustomers" label="Top customers by invoiced value" colorful />
         <ChartPlaceholder v-else kind="rows" :height="240" title="No customer invoices yet" description="Your biggest customers this month will rank here." :icon="Trophy" />
       </PanelCard>
 

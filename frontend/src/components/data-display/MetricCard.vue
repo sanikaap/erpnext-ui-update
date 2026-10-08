@@ -30,14 +30,14 @@ defineProps<{ metric: Metric }>();
 </script>
 
 <template>
-  <component :is="metric.to ? RouterLink : 'article'" :to="metric.to" :class="['metric-card', `metric-card--${metric.tone}`, { 'metric-card--link': metric.to }]" data-testid="card-metric">
+  <component :is="metric.to ? RouterLink : 'article'" :to="metric.to" :class="['metric-card', `metric-card--${metric.tone}`, `kpi-tone-${metric.tone}`, { 'metric-card--link': metric.to }]" data-testid="card-metric">
     <div class="metric-top">
-      <span :class="['metric-icon', `tone-${metric.tone}`]"><component :is="metric.icon" :size="17" /></span>
+      <span class="metric-icon"><component :is="metric.icon" :size="17" /></span>
       <span class="metric-label">{{ metric.label }}</span>
     </div>
     <div class="metric-body">
       <div :class="['metric-value tabular', { 'metric-value--empty': metric.emptyHint && !metric.loading }]"><span v-if="metric.loading" class="skeleton" style="width: 60%; height: 26px" /><template v-else>{{ metric.value }}</template></div>
-      <Sparkline v-if="metric.spark && !metric.loading && metric.spark.some(Boolean)" :data="metric.spark" :color="metric.sparkColor || '--chart-1'" :height="34" class="metric-spark" />
+      <Sparkline v-if="metric.spark && !metric.loading && metric.spark.some(Boolean)" :data="metric.spark" :color="metric.sparkColor || '--tone'" :height="34" class="metric-spark" />
     </div>
     <div class="metric-footer">
       <span v-if="metric.emptyHint && !metric.loading" class="metric-next">{{ metric.emptyHint }}</span>
@@ -52,11 +52,11 @@ defineProps<{ metric: Metric }>();
 </template>
 
 <style scoped>
-.metric-card { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: var(--space-4) var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-md); transition: border-color var(--dur-fast) var(--ease); }
+.metric-card { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: var(--space-4) var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-xl); background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--tone, var(--primary)) 11%, transparent), transparent 60%), var(--surface); box-shadow: var(--shadow-md); transition: border-color var(--dur-fast) var(--ease); }
 .metric-card--link:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
-.metric-card--link:hover { border-color: var(--border-strong); }
+.metric-card--link:hover { border-color: color-mix(in srgb, var(--tone) 45%, var(--border)); }
 .metric-top { display: flex; align-items: center; gap: 10px; }
-.metric-icon { display: grid; width: 34px; height: 34px; flex: none; place-items: center; border-radius: 10px; }
+.metric-icon { display: grid; width: 34px; height: 34px; flex: none; place-items: center; color: var(--tone); border-radius: 10px; background: color-mix(in srgb, var(--tone) 14%, transparent); }
 .metric-label { color: var(--muted-foreground); font-size: 12.5px; font-weight: 500; }
 .metric-body { display: flex; align-items: flex-end; gap: 12px; margin: 14px 0 8px; }
 .metric-spark { width: 42%; max-width: 120px; flex: none; }
