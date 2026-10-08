@@ -5,6 +5,7 @@ import { BookOpen, LayoutDashboard, PanelLeftClose, PanelLeftOpen, Search } from
 import SidebarModuleItem from './SidebarModuleItem.vue';
 import { utilityNavigation } from '@/config/navigation';
 import { useLayoutStore } from '@/stores/layout';
+import { shortcutLabel } from '@/lib/utils';
 import type { VisibleModule } from '@/composables/useNavigation';
 
 /**
@@ -22,6 +23,7 @@ defineProps<{
 const emit = defineEmits<{ select: [key: string]; navigate: []; toggleCollapse: [] }>();
 const route = useRoute();
 const layout = useLayoutStore();
+const searchShortcut = shortcutLabel('K');
 
 // Rail tooltips are fixed-positioned so the scrolling rail does not clip them.
 const tip = ref<{ label: string; top: number } | null>(null);
@@ -52,8 +54,8 @@ watch(() => route.fullPath, hideTip);
     </div>
 
     <div class="search-row">
-      <button type="button" :class="['search', { compact }]" aria-label="Search (Ctrl+K)" @click="layout.paletteOpen = true" @mouseenter="showTip('Search  ⌘K', $event, compact)" @mouseleave="hideTip" @focus="showTip('Search  ⌘K', $event, compact)" @blur="hideTip" @pointerdown="hideTip">
-        <Search :size="15" /><template v-if="!compact"><span>Search</span><kbd>⌘K</kbd></template>
+      <button type="button" :class="['search', { compact }]" :aria-label="`Search (${searchShortcut})`" aria-keyshortcuts="Control+K Meta+K" @click="layout.paletteOpen = true" @mouseenter="showTip(`Search  ${searchShortcut}`, $event, compact)" @mouseleave="hideTip" @focus="showTip(`Search  ${searchShortcut}`, $event, compact)" @blur="hideTip" @pointerdown="hideTip">
+        <Search :size="15" /><template v-if="!compact"><span>Search</span><kbd>{{ searchShortcut }}</kbd></template>
       </button>
     </div>
 

@@ -13,6 +13,9 @@ import { authApi } from '@/services/auth-api';
 import { markLoggedOut } from '@/router/auth-guard';
 import { fileApi } from '@/services/file-api';
 import { useLayoutStore } from '@/stores/layout';
+import { shortcutLabel } from '@/lib/utils';
+
+const searchShortcut = shortcutLabel('K');
 
 const emit = defineEmits<{ toggleMenu: [] }>();
 const theme = useTheme();
@@ -69,23 +72,25 @@ async function logout() {
     <nav class="breadcrumb" aria-label="Breadcrumb">
       <template v-for="(crumb, index) in crumbs" :key="`${index}-${crumb.label}`">
         <ChevronRight v-if="index > 0" :size="13" class="crumb-sep" />
-        <RouterLink v-if="crumb.to" :to="crumb.to" class="crumb" :style="crumb.color ? { '--c': `var(${crumb.color})` } : undefined">
-          <span v-if="crumb.color" class="crumb-dot" />{{ crumb.label }}
+        <RouterLink v-if="crumb.to" :to="crumb.to" class="crumb" :title="crumb.label" :style="crumb.color ? { '--c': `var(${crumb.color})` } : undefined">
+          <span v-if="crumb.color" class="crumb-dot" /><span class="crumb-label">{{ crumb.label }}</span>
         </RouterLink>
-        <span v-else :class="['crumb', { 'crumb--current': index === crumbs.length - 1 }]" :style="crumb.color ? { '--c': `var(${crumb.color})` } : undefined" :aria-current="index === crumbs.length - 1 ? 'page' : undefined">
-          <span v-if="crumb.color" class="crumb-dot" />{{ crumb.label }}
+        <span v-else :class="['crumb', { 'crumb--current': index === crumbs.length - 1 }]" :title="crumb.label" :style="crumb.color ? { '--c': `var(${crumb.color})` } : undefined" :aria-current="index === crumbs.length - 1 ? 'page' : undefined">
+          <span v-if="crumb.color" class="crumb-dot" /><span class="crumb-label">{{ crumb.label }}</span>
         </span>
       </template>
     </nav>
 
-    <button type="button" class="search-box" aria-label="Search (Ctrl+K)" data-testid="input-search" @click="layout.paletteOpen = true">
+    <button type="button" class="search-box" :aria-label="`Search (${searchShortcut})`" aria-keyshortcuts="Control+K Meta+K" data-testid="input-search" @click="layout.paletteOpen = true">
       <Search :size="15" />
       <span class="search-placeholder">Search or jump to…</span>
-      <kbd>⌘K</kbd>
+      <kbd>{{ searchShortcut }}</kbd>
     </button>
 
     <div class="top-actions">
-      <button class="icon-button" :aria-label="theme.isDark ? 'Switch to light theme' : 'Switch to dark theme'" :title="theme.isDark ? 'Light theme' : 'Dark theme'" @click="theme.toggleTheme()" data-testid="button-toggle-theme"><Sun v-if="theme.isDark" :size="17" /><Moon v-else :size="17" /></button>
+      <button class="icon-button" :aria-label="theme.isDark ? 'Switch to light theme' : 'Switch to dark theme'" :title="theme.isDark ? 'Light theme' : 'Dark theme'" @click="theme.toggleTheme()" data-testid="button-toggle-theme">
+        <Transition name="icon-swap" mode="out-in"><Sun v-if="theme.isDark" key="sun" :size="17" /><Moon v-else key="moon" :size="17" /></Transition>
+      </button>
       <NotificationsMenu />
 
       <AppPopover align="end" width="250px">
@@ -123,25 +128,32 @@ async function logout() {
   background: color-mix(in srgb, var(--surface) 86%, transparent);
   backdrop-filter: saturate(1.4) blur(12px);
 }
-.breadcrumb { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; font-size: 13px; }
-.crumb { display: inline-flex; align-items: center; gap: 6px; overflow: hidden; color: var(--muted-foreground); text-overflow: ellipsis; white-space: nowrap; }
+.breadcrumb { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; overflow: hidden; font-size: 13px; }
+/* Earlier crumbs shrink first; the current page keeps its room and only truncates last. */
+.crumb { display: inline-flex; min-width: 2.5em; flex: 0 1 auto; align-items: center; gap: 6px; color: var(--muted-foreground); white-space: nowrap; }
+.crumb-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.crumb--current { min-width: 0; flex-shrink: 0; max-width: 70%; }
+a.crumb { border-radius: var(--radius-sm); transition: color var(--dur-fast) var(--ease); }
+a.crumb:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
 a.crumb:hover { color: var(--foreground); }
 .crumb--current { color: var(--foreground); font-weight: 600; }
 .crumb-dot { width: 7px; height: 7px; flex: none; border-radius: 2px; background: var(--c); }
 .crumb-sep { flex: none; color: var(--subtle-foreground); }
 
-.search-box { display: flex; align-items: center; gap: 10px; width: 300px; height: 36px; padding: 0 6px 0 12px; color: var(--subtle-foreground); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--input-background); text-align: left; transition: border-color .15s, box-shadow .15s; }
+.search-box { display: flex; align-items: center; gap: 10px; width: 300px; height: 36px; padding: 0 6px 0 12px; color: var(--subtle-foreground); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--input-background); text-align: left; transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .search-box:hover { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); box-shadow: 0 0 0 3px var(--primary-softer); }
 .search-placeholder { flex: 1; font-size: 13px; }
 .search-box kbd { padding: 2px 6px; color: var(--muted-foreground); border: 1px solid var(--border); border-radius: 5px; background: var(--muted); font: 500 11px var(--font-sans); }
 
 .top-actions { display: flex; align-items: center; gap: 6px; }
-.icon-button { position: relative; display: grid; width: 36px; height: 36px; place-items: center; color: var(--muted-foreground); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); transition: background-color .15s, color .15s; }
+.icon-button { position: relative; display: grid; width: 36px; height: 36px; place-items: center; color: var(--muted-foreground); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .icon-button:hover { color: var(--primary); background: var(--primary-softer); }
 .icon-button.menu-button { display: none; }
+.icon-swap-enter-active, .icon-swap-leave-active { transition: opacity var(--dur-fast) var(--ease); }
+.icon-swap-enter-from, .icon-swap-leave-to { opacity: 0; }
 
 
-.user-chip { display: flex; align-items: center; gap: 9px; margin-left: 4px; padding: 3px 8px 3px 3px; border: 1px solid transparent; border-radius: 999px; background: none; transition: background-color .15s, border-color .15s; }
+.user-chip { display: flex; align-items: center; gap: 9px; margin-left: 4px; padding: 3px 8px 3px 3px; border: 1px solid transparent; border-radius: 999px; background: none; transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
 .user-chip:hover { border-color: var(--border); background: var(--surface); }
 .user-avatar { display: grid; width: 32px; height: 32px; flex: none; place-items: center; border-radius: 50%; object-fit: cover; color: #fff; background: linear-gradient(135deg, var(--primary), var(--accent)); font-size: 12px; font-weight: 700; }
 .user-copy { display: flex; max-width: 150px; flex-direction: column; line-height: 1.25; text-align: left; }
@@ -164,11 +176,12 @@ a.crumb:hover { color: var(--foreground); }
 .menu-theme button { flex: 1; height: 26px; color: var(--muted-foreground); border: 0; border-radius: 6px; background: none; font-size: 12px; text-transform: capitalize; }
 .menu-theme button.selected { color: var(--foreground); background: var(--surface-elevated); box-shadow: var(--shadow-sm); font-weight: 600; }
 
-@media (max-width: 1280px) { .search-box { width: 220px; } .user-copy, .user-caret { display: none; } }
+@media (max-width: 1280px) { .search-box { width: 220px; } .user-copy { max-width: 120px; } }
 @media (max-width: 1080px) { .search-box { width: 36px; padding: 0; justify-content: center; } .search-placeholder, .search-box kbd { display: none; } }
 @media (max-width: 900px) {
   .topbar { padding: 0 16px; gap: 8px; }
   .icon-button.menu-button { display: grid; border: 0; background: none; }
+  .user-copy, .user-caret { display: none; }
 }
-@media (max-width: 560px) { .breadcrumb .crumb:not(.crumb--current), .crumb-sep { display: none; } }
+@media (max-width: 560px) { .breadcrumb .crumb:not(.crumb--current), .crumb-sep { display: none; } .crumb--current { max-width: 100%; } }
 </style>
