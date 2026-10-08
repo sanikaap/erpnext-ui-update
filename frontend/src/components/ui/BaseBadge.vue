@@ -18,7 +18,7 @@ withDefaults(defineProps<{ tone?: StatusTone; label?: string; size?: 'sm' | 'md'
 .badge--violet { color: var(--primary-soft-foreground); border-color: color-mix(in srgb, var(--primary) 18%, transparent); background: var(--primary-soft); }
 .badge--green { color: var(--secondary-soft-foreground); border-color: color-mix(in srgb, var(--secondary) 20%, transparent); background: var(--secondary-soft); }
 .badge--amber { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 20%, transparent); background: var(--warning-soft); }
-.badge--rose { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 18%, transparent); background: var(--danger-soft); }
+.badge--rose { color: var(--danger-soft-foreground); border-color: color-mix(in srgb, var(--danger) 18%, transparent); background: var(--danger-soft); }
 .badge--cyan { color: var(--accent-soft-foreground); border-color: color-mix(in srgb, var(--accent) 20%, transparent); background: var(--accent-soft); }
 .badge--blue { color: var(--info); border-color: color-mix(in srgb, var(--info) 20%, transparent); background: var(--info-soft); }
 .badge--slate { color: var(--muted-foreground); border-color: var(--border); background: var(--muted); }

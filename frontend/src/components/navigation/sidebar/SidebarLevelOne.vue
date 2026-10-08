@@ -63,6 +63,7 @@ watch(() => route.fullPath, hideTip);
       <RouterLink
         to="/"
         :class="['overview', { active: route.path === '/', compact }]"
+        :aria-current="route.path === '/' ? 'page' : undefined"
         :aria-label="compact ? 'Overview' : undefined"
         @click="emit('navigate')"
         @mouseenter="showTip('Overview', $event, compact)" @mouseleave="hideTip" @focus="showTip('Overview', $event, compact)" @blur="hideTip" @pointerdown="hideTip"
@@ -94,7 +95,7 @@ watch(() => route.fullPath, hideTip);
       <a class="foot-link" href="https://docs.erpnext.com" target="_blank" rel="noopener noreferrer" aria-label="ERPNext documentation" @mouseenter="showTip('Help & documentation', $event, compact)" @mouseleave="hideTip" @focus="showTip('Help & documentation', $event, compact)" @blur="hideTip" @pointerdown="hideTip">
         <BookOpen :size="16" /><span v-if="!compact">Help &amp; docs</span>
       </a>
-      <RouterLink v-for="entry in utilityNavigation" :key="entry.path" :to="entry.path" :class="['foot-link', { active: route.path === entry.path }]" :aria-label="entry.label" @click="emit('navigate')" @mouseenter="showTip(entry.label, $event, compact)" @mouseleave="hideTip" @focus="showTip(entry.label, $event, compact)" @blur="hideTip" @pointerdown="hideTip">
+      <RouterLink v-for="entry in utilityNavigation" :key="entry.path" :to="entry.path" :class="['foot-link', { active: route.path === entry.path }]" :aria-current="route.path === entry.path ? 'page' : undefined" :aria-label="entry.label" @click="emit('navigate')" @mouseenter="showTip(entry.label, $event, compact)" @mouseleave="hideTip" @focus="showTip(entry.label, $event, compact)" @blur="hideTip" @pointerdown="hideTip">
         <component :is="entry.icon" :size="16" /><span v-if="!compact">{{ entry.label }}</span>
       </RouterLink>
       <button v-if="showCollapseToggle && compact && collapsed" type="button" class="foot-link" aria-label="Expand sidebar" @click="emit('toggleCollapse')" @mouseenter="showTip('Expand sidebar', $event, compact)" @mouseleave="hideTip" @focus="showTip('Expand sidebar', $event, compact)" @blur="hideTip" @pointerdown="hideTip">

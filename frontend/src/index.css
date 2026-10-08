@@ -28,9 +28,10 @@
   --surface-tint: #faf9fe;
   --muted: #f1eff8;
   --muted-foreground: #565170;
-  --subtle-foreground: #8a85a3;
+  /* Muted text tokens meet 4.5:1 on surface, background and muted in both themes. */
+  --subtle-foreground: #6f6a88;
   /* Field help text: a step darker than subtle, lighter than muted. */
-  --help-foreground: #6e698a;
+  --help-foreground: #625d7c;
   --border: #e7e4f1;
   --border-strong: #d6d1e6;
   --input-background: #ffffff;
@@ -61,6 +62,8 @@
   --warning-soft: #fef3c7;
   --danger: #dc2626;
   --danger-soft: #fee2e2;
+  /* Danger text on danger-soft (badges, chips): 4.5:1+. */
+  --danger-soft-foreground: #b91c1c;
   --info: #1d4ed8;
   --info-soft: #e0e9ff;
 
@@ -93,7 +96,7 @@
   --nav-border: #1d4f51;
   --nav-fg: #e6f1f0;
   --nav-muted: #b7d0ce;
-  --nav-subtle: #7fa3a0;
+  --nav-subtle: #8fb1ae;
   --nav-hover: #144749;
   --nav-active-bg: #17565a;
   --nav-active-fg: #ffffff;
@@ -152,8 +155,8 @@
   --surface-tint: #17142e;
   --muted: #211c3e;
   --muted-foreground: #aea7cc;
-  --subtle-foreground: #7d7699;
-  --help-foreground: #968fb5;
+  --subtle-foreground: #8f88ad;
+  --help-foreground: #a39cc2;
   --border: #29234a;
   --border-strong: #3a3263;
   --input-background: #110e24;
@@ -184,6 +187,7 @@
   --warning-soft: rgba(245, 158, 11, .15);
   --danger: #f87171;
   --danger-soft: rgba(239, 68, 68, .15);
+  --danger-soft-foreground: #f87171;
   --info: #93b4ff;
   --info-soft: rgba(96, 140, 255, .15);
 
@@ -300,7 +304,7 @@ h1, h2, h3, p { margin: 0; }
 .tone-violet { color: var(--primary-soft-foreground); background: var(--primary-soft); }
 .tone-green { color: var(--secondary-soft-foreground); background: var(--secondary-soft); }
 .tone-amber { color: var(--warning); background: var(--warning-soft); }
-.tone-rose { color: var(--danger); background: var(--danger-soft); }
+.tone-rose { color: var(--danger-soft-foreground); background: var(--danger-soft); }
 .tone-cyan { color: var(--accent-soft-foreground); background: var(--accent-soft); }
 .tone-blue { color: var(--info); background: var(--info-soft); }
 .tone-slate { color: var(--muted-foreground); background: var(--muted); }
@@ -373,7 +377,7 @@ h1, h2, h3, p { margin: 0; }
 /* Native selects share one chevron so every dropdown looks the same. */
 select.control {
   appearance: none; padding-right: 30px; cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a85a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23807a99' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 9px center;
 }
 input[type=checkbox], input[type=radio] { accent-color: var(--primary); }

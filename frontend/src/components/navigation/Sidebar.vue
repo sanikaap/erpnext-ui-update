@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import SidebarLevelOne from './sidebar/SidebarLevelOne.vue';
 import SidebarLevelTwo from './sidebar/SidebarLevelTwo.vue';
@@ -21,7 +21,7 @@ import { useLayoutStore } from '@/stores/layout';
  *   collapsed  icon rail only; Level 2 opens as a floating panel next to the rail
  *   mobile     drawer that drills down from Level 1 into Level 2
  */
-defineProps<{ open: boolean }>();
+const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
 const route = useRoute();
 const layout = useLayoutStore();
@@ -69,12 +69,57 @@ function navigated() {
 watch(() => isMobile.value && layout.mobileSidebarOpen, (opened) => {
   if (opened) layout.openModule = activeModule.value?.key ?? null;
 });
+
+// ---------- Mobile drawer: modal while open, unreachable while closed ----------
+const aside = ref<HTMLElement | null>(null);
+const drawerOpen = computed(() => isMobile.value && props.open);
+let returnFocus: HTMLElement | null = null;
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+function focusables() {
+  return [...(aside.value?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])].filter((element) => !element.closest('[inert]') && element.offsetParent !== null);
+}
+watch(drawerOpen, async (opened) => {
+  if (opened) {
+    returnFocus = document.activeElement as HTMLElement | null;
+    await nextTick();
+    focusables()[0]?.focus();
+  } else if (returnFocus && isMobile.value) {
+    // Navigating closes the drawer too; only hand focus back if it was left inside the drawer.
+    if (!document.activeElement || document.activeElement === document.body || aside.value?.contains(document.activeElement)) returnFocus.focus();
+    returnFocus = null;
+  }
+});
+// Drilling between Level 1 and Level 2 inside the drawer hides the focused level: move focus along.
+watch(() => layout.openModule, async () => {
+  if (!drawerOpen.value) return;
+  await nextTick();
+  focusables()[0]?.focus();
+});
+function onDrawerKeydown(event: KeyboardEvent) {
+  if (!drawerOpen.value) return;
+  if (event.key === 'Escape') { event.preventDefault(); emit('close'); return; }
+  if (event.key !== 'Tab') return;
+  const items = focusables();
+  if (!items.length) return;
+  const active = document.activeElement;
+  if (!active || !aside.value?.contains(active) || active.closest('[inert]')) { event.preventDefault(); items[0].focus(); return; }
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+}
 </script>
 
 <template>
   <aside
+    id="app-sidebar"
+    ref="aside"
     :class="['sidebar', { 'sidebar-open': open, 'sidebar--rail': railMode, 'sidebar--docked': openModule && !floating && !isMobile }]"
     aria-label="Sidebar"
+    :role="drawerOpen ? 'dialog' : undefined"
+    :aria-modal="drawerOpen || undefined"
+    :inert="isMobile && !open"
+    @keydown="onDrawerKeydown"
   >
     <!-- On mobile, Level 2 covers Level 1 completely: keep the hidden level out of the tab order. -->
     <div class="sidebar-level sidebar-level--one" :inert="isMobile && Boolean(openModule)">

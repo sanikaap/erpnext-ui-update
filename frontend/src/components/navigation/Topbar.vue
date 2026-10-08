@@ -67,7 +67,7 @@ async function logout() {
 
 <template>
   <header class="topbar">
-    <button class="icon-button menu-button" aria-label="Open navigation" @click="emit('toggleMenu')" data-testid="button-open-sidebar"><Menu :size="18" /></button>
+    <button class="icon-button menu-button" :aria-label="layout.mobileSidebarOpen ? 'Close navigation' : 'Open navigation'" aria-controls="app-sidebar" :aria-expanded="layout.mobileSidebarOpen" @click="emit('toggleMenu')" data-testid="button-open-sidebar"><Menu :size="18" /></button>
 
     <nav class="breadcrumb" aria-label="Breadcrumb">
       <template v-for="(crumb, index) in crumbs" :key="`${index}-${crumb.label}`">
