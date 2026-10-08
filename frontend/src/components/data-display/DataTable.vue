@@ -146,11 +146,12 @@ function image(row: FrappeDocument) {
 <style scoped>
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
-th { position: sticky; top: 0; z-index: 1; height: 38px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); background: var(--surface-tint); font-size: 11.5px; font-weight: 600; letter-spacing: .01em; white-space: nowrap; }
-td { height: 50px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); font-size: 13px; white-space: nowrap; }
+th { position: sticky; top: 0; z-index: 1; height: 38px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: var(--text-xs); font-weight: 600; letter-spacing: .01em; white-space: nowrap; }
+td { height: 50px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); font-size: var(--text-base); font-variant-numeric: tabular-nums; white-space: nowrap; }
 tbody tr:last-child td { border-bottom: 0; }
 .sort-button { display: inline-flex; align-items: center; gap: 4px; padding: 0; color: inherit; border: 0; background: none; font: inherit; }
 .sort-button:hover { color: var(--foreground); }
+.sort-button:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); border-radius: var(--radius-sm); }
 th.sorted { color: var(--primary-soft-foreground); }
 th.sorted svg { color: var(--primary); }
 .cell-numeric { font-variant-numeric: tabular-nums; text-align: right; }
@@ -169,16 +170,16 @@ th.sorted svg { color: var(--primary); }
 .check-value::before { width: 6px; height: 6px; content: ''; border-radius: 50%; background: var(--border-strong); }
 .check-value--on { color: var(--foreground); }
 .check-value--on::before { background: var(--secondary); box-shadow: 0 0 0 3px var(--secondary-soft); }
-tbody tr { cursor: pointer; transition: background-color .1s; }
+tbody tr { cursor: pointer; transition: background-color var(--dur-fast) var(--ease); }
 tbody tr:hover, tbody tr:focus-visible { outline: 0; background: var(--primary-softer); }
 tbody tr:focus-visible { box-shadow: inset 3px 0 var(--primary); }
 tbody tr.selected { background: var(--primary-soft); }
 tbody tr.selected td.cell-first { box-shadow: inset 3px 0 var(--primary); }
-tbody.refreshing { opacity: .55; transition: opacity .15s; }
+tbody.refreshing { opacity: .55; transition: opacity var(--dur-fast) var(--ease); }
 .skeleton-row { cursor: default; }
 .skeleton-row:hover { background: none; }
 .cell-open { width: 36px; color: var(--subtle-foreground); text-align: right; }
-.cell-open svg { opacity: 0; transition: opacity .1s, transform .1s; }
+.cell-open svg { opacity: 0; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 tbody tr:hover .cell-open svg { color: var(--primary); opacity: 1; transform: translateX(2px); }
 
 /* Card layout for narrow screens */

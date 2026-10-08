@@ -39,7 +39,8 @@ defineProps<{ metric: Metric }>();
 </template>
 
 <style scoped>
-.metric-card { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 16px 18px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); transition: border-color .15s, box-shadow .15s, transform .15s; }
+.metric-card { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 16px 18px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+.metric-card--link:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
 .metric-card::before { position: absolute; inset: 0 0 auto; height: 3px; content: ''; opacity: .9; }
 .metric-card--violet::before { background: linear-gradient(90deg, var(--primary), transparent); }
 .metric-card--green::before { background: linear-gradient(90deg, var(--secondary), transparent); }
@@ -52,8 +53,8 @@ defineProps<{ metric: Metric }>();
 .metric-icon { display: grid; width: 34px; height: 34px; flex: none; place-items: center; border-radius: 10px; }
 .metric-label { color: var(--muted-foreground); font-size: 12.5px; font-weight: 500; }
 .metric-value { min-height: 30px; margin: 14px 0 8px; color: var(--foreground); font-size: 26px; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; }
-.metric-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 20px; color: var(--subtle-foreground); font-size: 12px; }
-.trend-pill { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+.metric-footer { font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 20px; color: var(--subtle-foreground); font-size: 12px; }
+.trend-pill { font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
 .trend-pill--good { color: var(--secondary-soft-foreground); background: var(--secondary-soft); }
 .trend-pill--bad { color: var(--danger); background: var(--danger-soft); }
 .trend-pill--flat { color: var(--muted-foreground); background: var(--muted); }

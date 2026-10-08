@@ -195,7 +195,8 @@ defineExpose({ tabs: visibleTabs, activeTab });
 
 .form-tabs { position: sticky; z-index: 6; top: calc(var(--topbar-height) + var(--form-sticky-offset, 0px)); display: flex; gap: 4px; overflow-x: auto; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); box-shadow: var(--shadow-sm); scrollbar-width: none; }
 .dynamic-form--dense .form-tabs { position: static; }
-.form-tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: 6px; height: 32px; padding: 0 12px; color: var(--muted-foreground); border: 0; border-radius: var(--radius-md); background: none; font-size: 13px; font-weight: 500; white-space: nowrap; transition: background-color .12s, color .12s; }
+.form-tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: 6px; height: 32px; padding: 0 12px; color: var(--muted-foreground); border: 0; border-radius: var(--radius-md); background: none; font-size: 13px; font-weight: 500; white-space: nowrap; transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.form-tab:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
 .form-tab:hover { color: var(--foreground); background: var(--muted); }
 .form-tab--active { color: var(--primary-soft-foreground); background: var(--primary-soft); font-weight: 600; }
 .form-tab-error { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }
