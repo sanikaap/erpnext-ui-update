@@ -49,7 +49,7 @@ const site = erpnextApi.getBaseUrl();
 .connection { display: flex; align-items: flex-start; gap: 12px; }
 .connection-dot { width: 8px; height: 8px; flex: none; margin-top: 6px; border-radius: 50%; background: var(--secondary); box-shadow: 0 0 0 3px var(--secondary-soft); }
 .toggle { width: 38px; height: 22px; flex: none; padding: 2px; border: 0; border-radius: 99px; background: var(--border-strong); transition: background-color .15s; }
-.toggle span { display: block; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-sm); transition: transform .15s var(--ease); }
+.toggle span { display: block; width: 18px; height: 18px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow-sm); transition: transform .15s var(--ease); }
 .toggle[aria-checked="true"] { background: var(--primary); }
 .toggle[aria-checked="true"] span { transform: translateX(16px); }
 @media (max-width: 640px) { .setting-row { align-items: flex-start; flex-direction: column; gap: 12px; } }

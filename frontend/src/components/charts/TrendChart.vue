@@ -44,12 +44,12 @@ function render() {
       backgroundColor: token('--surface-elevated'),
       borderColor: token('--border'),
       padding: [8, 12],
-      textStyle: { color: token('--foreground'), fontSize: 12, fontFamily: 'Inter' },
+      textStyle: { color: token('--foreground'), fontSize: 12, fontFamily: token('--font-sans') },
       valueFormatter: (value: number) => format(Number(value)),
-      extraCssText: 'border-radius: 10px; box-shadow: 0 8px 24px rgba(20,10,60,.14);',
+      extraCssText: `border-radius: 10px; box-shadow: ${token('--shadow-lg')};`,
     },
-    xAxis: { type: 'category', data: props.labels, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: axis, fontSize: 11, fontFamily: 'Inter', margin: 10, hideOverlap: true } },
-    yAxis: { type: 'value', splitNumber: 4, minInterval: props.integer ? 1 : undefined, axisLabel: { color: axis, fontSize: 11, fontFamily: 'Inter', formatter: (value: number) => format(value) }, splitLine: { lineStyle: { color: grid, type: 'dashed' } } },
+    xAxis: { type: 'category', data: props.labels, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: axis, fontSize: 11, fontFamily: token('--font-sans'), margin: 10, hideOverlap: true } },
+    yAxis: { type: 'value', splitNumber: 4, minInterval: props.integer ? 1 : undefined, axisLabel: { color: axis, fontSize: 11, fontFamily: token('--font-sans'), formatter: (value: number) => format(value) }, splitLine: { lineStyle: { color: grid, type: 'dashed' } } },
     series: props.series.map((entry) => {
       const color = token(entry.color);
       return props.type === 'bar'

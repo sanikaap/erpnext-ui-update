@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
 
 .link-readonly { display: flex; min-height: 36px; align-items: center; }
 .link-readonly--compact { min-height: 30px; }
-.link-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 8px; overflow: hidden; color: var(--info); border: 0; border-radius: 6px; background: var(--info-soft); font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.link-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 8px; overflow: hidden; color: var(--primary-soft-foreground); border: 0; border-radius: 6px; background: var(--primary-soft); font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .link-chip:hover { text-decoration: underline; }
 .link-id { opacity: .7; font-family: var(--font-mono); font-size: 10.5px; font-weight: 400; }
 .link-empty { color: var(--subtle-foreground); }

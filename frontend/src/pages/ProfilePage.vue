@@ -55,7 +55,7 @@ const details = computed(() => [
 
 <style scoped>
 .profile-hero { display: flex; align-items: center; gap: 16px; padding: 20px 22px; border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border)); border-radius: var(--radius-xl); background: linear-gradient(115deg, color-mix(in srgb, var(--primary) 12%, var(--surface)), var(--surface) 60%); }
-.large-avatar { display: grid; width: 60px; height: 60px; flex: none; place-items: center; border-radius: 18px; object-fit: cover; color: #fff; background: linear-gradient(135deg, var(--primary), var(--accent)); box-shadow: var(--shadow-primary); font-size: 19px; font-weight: 700; }
+.large-avatar { display: grid; width: 60px; height: 60px; flex: none; place-items: center; border-radius: 18px; object-fit: cover; color: var(--primary-foreground); background: var(--primary); box-shadow: var(--shadow-primary); font-size: 19px; font-weight: 700; }
 .profile-copy { min-width: 0; flex: 1; }
 .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .detail { display: flex; align-items: center; gap: 12px; padding: 10px 0; color: var(--primary); border-bottom: 1px solid var(--border); }

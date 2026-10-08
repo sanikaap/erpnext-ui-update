@@ -155,7 +155,7 @@ function image(row: FrappeDocument) {
 .table-wrap { overflow-x: auto; }
 .table-wrap--sticky { max-height: calc(100dvh - var(--topbar-height) - 32px); overflow: auto; overscroll-behavior: contain; }
 table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
-th { position: sticky; top: 0; z-index: 1; height: 38px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: var(--text-xs); font-weight: 600; letter-spacing: .01em; white-space: nowrap; }
+th { position: sticky; top: 0; z-index: 1; height: 38px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; }
 td { height: 50px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); font-size: var(--text-base); font-variant-numeric: tabular-nums; white-space: nowrap; }
 tbody tr:last-child td { border-bottom: 0; }
 .table-wrap--compact th { height: 34px; }
@@ -177,7 +177,7 @@ th.sorted svg { color: var(--primary); }
 .cell-titles { display: flex; min-width: 0; flex-direction: column; line-height: 1.3; }
 .cell-titles strong { overflow: hidden; color: var(--foreground); font-size: 13px; font-weight: 600; text-overflow: ellipsis; }
 .cell-titles small { overflow: hidden; color: var(--subtle-foreground); font-size: 11px; text-overflow: ellipsis; }
-.cell-link { color: var(--info); font-weight: 500; }
+.cell-link { color: var(--primary-soft-foreground); font-weight: 500; }
 .cell-muted { color: var(--subtle-foreground); font-size: 12.5px; }
 .cell-empty { color: var(--subtle-foreground); }
 .check-value { display: inline-flex; align-items: center; gap: 6px; color: var(--subtle-foreground); }

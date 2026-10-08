@@ -156,7 +156,7 @@ a.crumb:hover { color: var(--foreground); }
 
 .user-chip { display: flex; align-items: center; gap: 9px; margin-left: 4px; padding: 3px 8px 3px 3px; border: 1px solid transparent; border-radius: 999px; background: none; transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
 .user-chip:hover { border-color: var(--border); background: var(--surface); }
-.user-avatar { display: grid; width: 32px; height: 32px; flex: none; place-items: center; border-radius: 50%; object-fit: cover; color: #fff; background: linear-gradient(135deg, var(--primary), var(--accent)); font-size: 12px; font-weight: 700; }
+.user-avatar { display: grid; width: 32px; height: 32px; flex: none; place-items: center; border-radius: 50%; object-fit: cover; color: var(--primary-foreground); background: var(--primary); font-size: 12px; font-weight: 700; }
 .user-copy { display: flex; max-width: 150px; flex-direction: column; line-height: 1.25; text-align: left; }
 .user-copy strong { overflow: hidden; color: var(--foreground); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .user-copy small { overflow: hidden; color: var(--subtle-foreground); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }

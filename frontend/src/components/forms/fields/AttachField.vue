@@ -69,7 +69,7 @@ async function onFile(event: Event) {
 .attach-preview img { width: 100%; height: 100%; object-fit: cover; }
 .attach-file { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px 0 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--readonly-background); }
 .attach-icon { flex: none; color: var(--primary); }
-.attach-name { min-width: 0; flex: 1; overflow: hidden; color: var(--info); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.attach-name { min-width: 0; flex: 1; overflow: hidden; color: var(--primary-soft-foreground); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .attach-name:hover { text-decoration: underline; }
 .attach-clear { display: grid; width: 22px; height: 22px; flex: none; place-items: center; color: var(--subtle-foreground); border: 0; border-radius: 5px; background: none; }
 .attach-clear:hover { color: var(--danger); background: var(--danger-soft); }

@@ -224,7 +224,7 @@ function exportCsv() {
 .report-table tbody tr:hover td { background: var(--primary-softer); }
 .report-table .num { font-variant-numeric: tabular-nums; text-align: right; }
 .row-bold td { font-weight: 700; }
-.report-link { color: var(--info); font-weight: 500; }
+.report-link { color: var(--primary-soft-foreground); font-weight: 500; }
 .report-link:hover { text-decoration: underline; }
 .muted { color: var(--subtle-foreground); }
 .report-count { padding: 10px 14px; color: var(--muted-foreground); border-top: 1px solid var(--border); font-size: 12px; }

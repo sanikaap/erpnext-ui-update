@@ -377,7 +377,7 @@ onBeforeUnmount(() => observer?.disconnect());
 
 .doc-header { position: sticky; z-index: 8; top: var(--topbar-height); display: flex; flex-direction: column; gap: 10px; margin: -6px -28px 0; padding: 10px 28px 12px; background: color-mix(in srgb, var(--background) 97%, transparent); backdrop-filter: blur(10px); }
 .doc-identity { display: flex; align-items: center; gap: 14px; }
-.doc-new-mark { display: grid; width: 48px; height: 48px; flex: none; place-items: center; color: #fff; border-radius: var(--radius-lg); background: var(--primary-gradient); box-shadow: var(--shadow-primary); }
+.doc-new-mark { display: grid; width: 48px; height: 48px; flex: none; place-items: center; color: var(--primary-foreground); border-radius: var(--radius-lg); background: var(--primary); box-shadow: var(--shadow-primary); }
 .doc-titles { min-width: 0; flex: 1; }
 .doc-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .doc-title-row .page-title { margin: 0; }
@@ -388,7 +388,7 @@ onBeforeUnmount(() => observer?.disconnect());
 .doc-name { padding: 0 6px; color: var(--primary-soft-foreground); border-radius: 5px; background: var(--primary-soft); font-size: 11.5px; }
 .doc-actions { display: flex; flex: none; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
 .doc-final { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; height: 32px; color: var(--secondary-soft-foreground); border-radius: var(--radius-md); background: var(--secondary-soft); font-size: 12.5px; font-weight: 600; }
-.doc-notice { padding: 8px 12px; color: var(--info); border: 1px solid color-mix(in srgb, var(--info) 20%, transparent); border-radius: var(--radius-md); background: var(--info-soft); font-size: 12.5px; }
+.doc-notice { padding: 8px 12px; color: var(--info-soft-foreground); border: 1px solid color-mix(in srgb, var(--info) 20%, transparent); border-radius: var(--radius-md); background: var(--info-soft); font-size: 12.5px; }
 .doc-errors { padding: 8px 12px; color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent); border-radius: var(--radius-md); background: var(--danger-soft); font-size: 12.5px; }
 
 .more { position: relative; }

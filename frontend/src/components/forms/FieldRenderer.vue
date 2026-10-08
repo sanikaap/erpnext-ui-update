@@ -221,8 +221,8 @@ function onJsonInput(value: string) {
   </div>
 
   <div v-else-if="type === 'Color'" class="fr-color control">
-    <input type="color" :value="stringValue || '#7c3aed'" @input="update(($event.target as HTMLInputElement).value)" />
-    <input :id="inputId" :value="stringValue" placeholder="#7c3aed" @input="update(($event.target as HTMLInputElement).value)" />
+    <input type="color" :value="stringValue || '#0e6e70'" @input="update(($event.target as HTMLInputElement).value)" />
+    <input :id="inputId" :value="stringValue" placeholder="#0e6e70" @input="update(($event.target as HTMLInputElement).value)" />
   </div>
 
   <div v-else-if="type === 'Autocomplete'" class="fr-auto">
@@ -259,10 +259,10 @@ function onJsonInput(value: string) {
 .fr-readonly:has(.fr-multiline) { align-items: flex-start; padding-top: 8px; padding-bottom: 8px; }
 .fr-multiline { white-space: pre-wrap; }
 .fr-empty { color: var(--subtle-foreground); }
-.fr-link { display: inline-flex; align-items: center; gap: 6px; color: var(--info); }
+.fr-link { display: inline-flex; align-items: center; gap: 6px; color: var(--primary-soft-foreground); }
 .fr-link:hover { text-decoration: underline; }
 .fr-swatch { width: 18px; height: 18px; border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .1); }
-.fr-check-read { display: grid; width: 18px; height: 18px; place-items: center; color: #fff; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface); }
+.fr-check-read { display: grid; width: 18px; height: 18px; place-items: center; color: var(--primary-foreground); border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface); }
 .fr-check-read.on { border-color: var(--secondary); background: var(--secondary); }
 .fr-check--readonly { cursor: default; color: var(--muted-foreground); }
 
@@ -271,7 +271,7 @@ function onJsonInput(value: string) {
 .fr-check input { position: absolute; opacity: 0; pointer-events: none; }
 .fr-check-box { display: grid; width: 18px; height: 18px; flex: none; place-items: center; color: transparent; border: 1.5px solid var(--border-strong); border-radius: 5px; background: var(--input-background); transition: background-color .12s, border-color .12s, box-shadow .12s; }
 .fr-check:hover .fr-check-box { border-color: var(--primary); }
-.fr-check input:checked + .fr-check-box { color: #fff; border-color: var(--primary); background: var(--primary); }
+.fr-check input:checked + .fr-check-box { color: var(--primary-foreground); border-color: var(--primary); background: var(--primary); }
 .fr-check input:focus-visible + .fr-check-box { box-shadow: 0 0 0 3px var(--primary-soft); }
 .fr-required { margin-left: 2px; color: var(--danger); font-weight: 600; }
 

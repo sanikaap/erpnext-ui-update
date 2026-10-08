@@ -180,7 +180,7 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
 
 /* Header: solid, quiet, with the module's color only on its mark. */
 .module-header { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-.module-mark { display: grid; width: 44px; height: 44px; flex: none; place-items: center; color: #fff; border-radius: 12px; background: var(--c); }
+.module-mark { display: grid; width: 44px; height: 44px; flex: none; place-items: center; color: var(--surface); border-radius: 12px; background: var(--c); }
 .module-heading { min-width: 0; flex: 1; }
 .module-heading .page-title { margin-top: 2px; }
 .demo-tag { padding: 1px 8px; color: var(--accent-soft-foreground); border-radius: 999px; background: var(--accent-soft); font-size: 11.5px; font-weight: 600; }
@@ -194,11 +194,11 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
 .kpi-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: currentColor; }
 .kpi-value { overflow: hidden; margin-top: 6px; color: var(--foreground); font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
 .kpi-hint { overflow: hidden; color: var(--subtle-foreground); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.kpi--lead { border-color: #0f3b3d; background: #0f3b3d; box-shadow: none; }
-.kpi--lead .kpi-label, .kpi--lead .kpi-hint { color: #a9c7c5; }
-.kpi--lead .kpi-value { color: #fff; }
-.kpi--lead .kpi-dot { color: #5fd0c8; }
-.kpi--lead.kpi--link:hover { border-color: #17565a; background: #124446; }
+.kpi--lead { border-color: var(--primary); background: var(--primary); box-shadow: var(--shadow-md); }
+.kpi--lead .kpi-label, .kpi--lead .kpi-hint { color: color-mix(in srgb, var(--primary-foreground) 80%, transparent); }
+.kpi--lead .kpi-value { color: var(--primary-foreground); }
+.kpi--lead .kpi-dot { color: var(--primary-foreground); }
+.kpi--lead.kpi--link:hover { border-color: var(--primary-hover); background: var(--primary-hover); }
 .kpi-skeleton { height: 104px; border-radius: 12px; }
 
 /* Panels */
@@ -219,7 +219,7 @@ a.progress-label:hover { color: var(--primary); text-decoration: underline; }
 .progress-figure { color: var(--subtle-foreground); font-size: 12px; white-space: nowrap; }
 .progress-figure b { color: var(--foreground); font-size: 13px; }
 .progress-track { height: 8px; overflow: hidden; border-radius: 999px; background: var(--chart-track); }
-.progress-track i { display: block; height: 100%; border-radius: 999px; background: #0e6e70; }
+.progress-track i { display: block; height: 100%; border-radius: 999px; background: var(--primary); }
 .progress-track i.met { background: var(--secondary); }
 .progress-track i.low { background: var(--warning); }
 .progress-list small { color: var(--subtle-foreground); font-size: 11.5px; }

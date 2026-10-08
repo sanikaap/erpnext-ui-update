@@ -14,12 +14,12 @@ defineEmits<{ action: [] }>();
 </template>
 
 <style scoped>
-.panel-card { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); }
+.panel-card { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-md); }
 .card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 22px 0; }
 .card-titles { min-width: 0; }
-.card-titles h2 { color: var(--foreground); font-size: 15px; font-weight: 600; letter-spacing: -.01em; line-height: 1.3; }
-.card-titles p { margin-top: 3px; color: var(--muted-foreground); font-size: 12.5px; }
-.card-action { flex: none; height: 30px; padding: 0 12px; color: var(--foreground); border: 1px solid var(--border); border-radius: 999px; background: var(--surface); font-size: 12.5px; font-weight: 500; transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+.card-titles h2 { color: var(--foreground); font-size: var(--text-lg); font-weight: 600; letter-spacing: -.005em; line-height: 1.3; }
+.card-titles p { margin-top: 3px; color: var(--subtle-foreground); font-size: 12.5px; }
+.card-action { flex: none; height: 30px; padding: 0 12px; color: var(--foreground); border: 1px solid var(--input-border); border-radius: var(--radius-md); background: var(--surface); font-size: 12.5px; font-weight: 500; transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
 .card-action:hover { border-color: var(--border-strong); background: var(--muted); }
 .card-action:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
 .card-content { padding: 18px 22px 22px; }

@@ -62,6 +62,6 @@ function addLink() {
 .rich-body :deep(p) { margin: 0 0 6px; }
 .rich-readonly { color: var(--foreground); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .rich-readonly :deep(p) { margin: 0 0 6px; }
-.rich-readonly :deep(a) { color: var(--info); }
+.rich-readonly :deep(a) { color: var(--primary-soft-foreground); }
 .rich-readonly :deep(.rich-empty) { color: var(--subtle-foreground); }
 </style>

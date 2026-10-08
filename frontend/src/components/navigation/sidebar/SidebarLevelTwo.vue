@@ -95,9 +95,9 @@ const isActive = (item: NavigationItem) => item.path === activePath.value;
 .close:hover { color: var(--nav-fg); background: var(--nav-hover); }
 
 .module-title { display: flex; align-items: center; gap: 11px; padding: 2px 16px 14px; }
-.module-badge { display: grid; width: 36px; height: 36px; flex: none; place-items: center; color: #062a2b; border-radius: 10px; background: var(--c); }
+.module-badge { display: grid; width: 36px; height: 36px; flex: none; place-items: center; color: var(--nav-brand-ink); border-radius: 10px; background: var(--c); }
 .module-copy { min-width: 0; }
-.module-copy h2 { overflow: hidden; color: #fff; font-size: 16px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.module-copy h2 { overflow: hidden; color: var(--nav-active-fg); font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .module-copy p { display: flex; align-items: center; gap: 6px; margin-top: 3px; color: var(--nav-subtle); font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .module-kind { padding: 0 6px; color: var(--nav-muted); border: 1px solid var(--nav-border); border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: .06em; line-height: 16px; text-transform: uppercase; }
 

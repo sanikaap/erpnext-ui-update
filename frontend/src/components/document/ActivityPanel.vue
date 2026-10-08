@@ -137,7 +137,7 @@ async function removeAttachment(fileName: string, name: string) {
 .activity-empty { color: var(--subtle-foreground); font-size: 12.5px; }
 .attachment-list { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .attachment-list li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; color: var(--subtle-foreground); border-radius: var(--radius-md); background: var(--surface-tint); }
-.attachment-list a { min-width: 0; flex: 1; overflow: hidden; color: var(--info); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.attachment-list a { min-width: 0; flex: 1; overflow: hidden; color: var(--primary-soft-foreground); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
 .attachment-list button { display: grid; width: 20px; height: 20px; place-items: center; color: var(--subtle-foreground); border: 0; border-radius: 5px; background: none; }
 .attachment-list button:hover { color: var(--danger); background: var(--danger-soft); }
 .comment-box { position: relative; margin-bottom: 14px; }

@@ -113,11 +113,11 @@ watch(() => route.fullPath, hideTip);
 .brand-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: var(--topbar-height); flex: none; padding: 0 10px 0 16px; }
 .compact .brand-row { justify-content: center; padding: 0; }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.brand-mark { display: grid; width: 30px; height: 30px; flex: none; place-items: center; border-radius: 8px; background: #14b8a6; }
-.brand-mark span { width: 10px; height: 10px; border: 2px solid #062a2b; border-radius: 3px; transform: rotate(45deg); }
+.brand-mark { display: grid; width: 30px; height: 30px; flex: none; place-items: center; border-radius: 8px; background: var(--nav-brand); }
+.brand-mark span { width: 10px; height: 10px; border: 2px solid var(--nav-brand-ink); border-radius: 3px; transform: rotate(45deg); }
 .brand-copy { display: flex; min-width: 0; flex-direction: column; line-height: 1.2; }
-.brand-copy strong { color: #fff; font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; }
-.brand-copy small { color: var(--nav-subtle); font-size: 11px; }
+.brand-copy strong { color: var(--nav-active-fg); font-family: var(--font-display); font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.brand-copy small { color: var(--nav-subtle); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
 .icon-btn { display: grid; width: 30px; height: 30px; flex: none; place-items: center; color: var(--nav-subtle); border: 0; border-radius: 7px; background: none; }
 .icon-btn:hover { color: var(--nav-fg); background: var(--nav-hover); }
 
@@ -138,7 +138,7 @@ watch(() => route.fullPath, hideTip);
 .overview svg { flex: none; color: var(--nav-accent); }
 .overview:hover { color: var(--nav-fg); background: var(--nav-hover); }
 .overview:focus-visible, .foot-link:focus-visible, .search:focus-visible, .icon-btn:focus-visible, .brand:focus-visible { outline: 2px solid var(--nav-accent); outline-offset: -2px; }
-.overview.active { color: #fff; background: var(--nav-active-bg); font-weight: 600; }
+.overview.active { color: var(--nav-active-fg); background: var(--nav-active-bg); font-weight: 600; }
 .overview.active::before { position: absolute; top: 8px; bottom: 8px; left: 0; width: 3px; content: ''; border-radius: 0 3px 3px 0; background: var(--nav-accent); }
 .overview.compact { justify-content: center; width: 42px; height: 42px; padding: 0; border-radius: 10px; }
 .overview.compact.active::before { left: -13px; top: 11px; bottom: 11px; }
@@ -149,8 +149,8 @@ watch(() => route.fullPath, hideTip);
 .foot-link svg { flex: none; color: var(--nav-subtle); }
 .foot-link:hover { color: var(--nav-fg); background: var(--nav-hover); }
 .foot-link:hover svg { color: var(--nav-fg); }
-.foot-link.active { color: #fff; background: var(--nav-active-bg); }
+.foot-link.active { color: var(--nav-active-fg); background: var(--nav-active-bg); }
 .compact .foot-link { justify-content: center; width: 42px; height: 38px; padding: 0; }
 
-.rail-tip { position: fixed; z-index: 75; left: calc(var(--sidebar-rail-width) + 8px); padding: 5px 9px; color: #fff; border-radius: 6px; background: #062224; box-shadow: 0 6px 16px rgba(0, 0, 0, .25); font-size: 12px; font-weight: 500; pointer-events: none; transform: translateY(-50%); white-space: nowrap; }
+.rail-tip { position: fixed; z-index: 75; left: calc(var(--sidebar-rail-width) + 8px); padding: 5px 9px; color: var(--nav-active-fg); border-radius: 6px; background: var(--nav-tooltip-bg); box-shadow: var(--shadow-lg); font-size: 12px; font-weight: 500; pointer-events: none; transform: translateY(-50%); white-space: nowrap; }
 </style>
