@@ -141,8 +141,10 @@ async function removeAttachment(fileName: string, name: string) {
 .attachment-list button { display: grid; width: 20px; height: 20px; place-items: center; color: var(--subtle-foreground); border: 0; border-radius: 5px; background: none; }
 .attachment-list button:hover { color: var(--danger); background: var(--danger-soft); }
 .comment-box { position: relative; margin-bottom: 14px; }
-.comment-box textarea { height: auto; min-height: 60px; padding: 8px 40px 8px 10px; resize: vertical; line-height: 1.5; }
-.comment-send { position: absolute; right: 6px; bottom: 8px; display: grid; width: 28px; height: 28px; place-items: center; color: #fff; border: 0; border-radius: var(--radius-md); background: var(--primary); }
+.comment-box textarea { height: auto; min-height: 64px; padding: 9px 44px 9px 11px; resize: vertical; line-height: 1.5; }
+.comment-send { position: absolute; right: 8px; bottom: 9px; display: grid; width: 28px; height: 28px; place-items: center; color: var(--primary-foreground); border: 0; border-radius: var(--radius-md); background: var(--primary); transition: background-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
+.comment-send:hover:not(:disabled) { background: var(--primary-hover); }
+.comment-send:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
 .comment-send:disabled { opacity: .4; cursor: not-allowed; }
 .timeline { position: relative; display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; list-style: none; }
 .timeline::before { position: absolute; top: 6px; bottom: 6px; left: 13px; width: 1px; content: ''; background: var(--border); }

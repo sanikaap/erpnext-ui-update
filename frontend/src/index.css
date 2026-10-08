@@ -29,6 +29,8 @@
   --muted: #f1eff8;
   --muted-foreground: #565170;
   --subtle-foreground: #8a85a3;
+  /* Field help text: a step darker than subtle, lighter than muted. */
+  --help-foreground: #6e698a;
   --border: #e7e4f1;
   --border-strong: #d6d1e6;
   --input-background: #ffffff;
@@ -151,6 +153,7 @@
   --muted: #211c3e;
   --muted-foreground: #aea7cc;
   --subtle-foreground: #7d7699;
+  --help-foreground: #968fb5;
   --border: #29234a;
   --border-strong: #3a3263;
   --input-background: #110e24;

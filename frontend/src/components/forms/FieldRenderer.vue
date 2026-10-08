@@ -273,7 +273,7 @@ function onJsonInput(value: string) {
 .fr-check:hover .fr-check-box { border-color: var(--primary); }
 .fr-check input:checked + .fr-check-box { color: #fff; border-color: var(--primary); background: var(--primary); }
 .fr-check input:focus-visible + .fr-check-box { box-shadow: 0 0 0 3px var(--primary-soft); }
-.fr-required { margin-left: 2px; color: var(--danger); font-weight: 500; }
+.fr-required { margin-left: 2px; color: var(--danger); font-weight: 600; }
 
 .fr-select { position: relative; }
 .fr-select--compact select { height: 30px; border-color: transparent; box-shadow: none; background: transparent; }

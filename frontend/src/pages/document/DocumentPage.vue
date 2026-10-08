@@ -242,8 +242,14 @@ function onKeydown(event: KeyboardEvent) {
     if (editable.value && (dirty.value || isNew.value)) void save();
   }
 }
-onMounted(() => window.addEventListener('keydown', onKeydown));
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
+// Closing or reloading the tab with unsaved edits: the browser's own prompt.
+function onBeforeUnload(event: BeforeUnloadEvent) {
+  if (!dirty.value) return;
+  event.preventDefault();
+  event.returnValue = '';
+}
+onMounted(() => { window.addEventListener('keydown', onKeydown); window.addEventListener('beforeunload', onBeforeUnload); });
+onBeforeUnmount(() => { window.removeEventListener('keydown', onKeydown); window.removeEventListener('beforeunload', onBeforeUnload); });
 
 onBeforeRouteLeave(async () => {
   if (!dirty.value || busy.value) return true;
@@ -278,7 +284,7 @@ onBeforeUnmount(() => observer?.disconnect());
                 <template v-else>{{ title }}</template>
               </h1>
               <BaseBadge v-if="status" :tone="status.tone" :label="status.label" size="md" />
-              <span v-if="dirty && !isNew" class="dirty-pill">Unsaved changes</span>
+              <span v-if="dirty && !isNew" class="dirty-pill" role="status"><span class="save-dot" aria-hidden="true" />Unsaved changes</span>
             </div>
             <p class="doc-meta">
               <span v-if="!isNew && title !== name" class="mono doc-name">{{ name }}</span>
@@ -306,8 +312,9 @@ onBeforeUnmount(() => observer?.disconnect());
             </div>
             <BaseButton v-if="showCancel" variant="danger" size="sm" :loading="busy === 'Cancel'" @click="cancelDocument"><Ban :size="14" />Cancel</BaseButton>
             <BaseButton v-if="showAmend" variant="outline" size="sm" :loading="busy === 'Amend'" @click="amend"><FilePen :size="14" />Amend</BaseButton>
-            <BaseButton v-if="editable && (dirty || isNew)" variant="primary" size="sm" :loading="busy === 'Save'" @click="save"><Save :size="14" />{{ isNew ? `Create ${doctype}` : 'Save' }}</BaseButton>
-            <BaseButton v-else-if="showSubmit" variant="secondary" size="sm" :loading="busy === 'Submit'" @click="submit"><Send :size="14" />Submit</BaseButton>
+            <!-- Save is always visible on an editable form; it enables once there is something to save. -->
+            <BaseButton v-if="editable" variant="primary" size="sm" :loading="busy === 'Save'" :disabled="!dirty && !isNew" :title="!dirty && !isNew ? 'No changes to save' : undefined" aria-keyshortcuts="Control+S Meta+S" @click="save"><Save :size="14" />{{ isNew ? `Create ${doctype}` : 'Save' }}</BaseButton>
+            <BaseButton v-if="showSubmit && !dirty" variant="secondary" size="sm" :loading="busy === 'Submit'" @click="submit"><Send :size="14" />Submit</BaseButton>
             <span v-else-if="!isNew && docstatus === 1" class="doc-final"><CheckCircle2 :size="14" />Submitted</span>
           </div>
         </div>
@@ -374,7 +381,7 @@ onBeforeUnmount(() => observer?.disconnect());
 .doc-titles { min-width: 0; flex: 1; }
 .doc-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .doc-title-row .page-title { margin: 0; }
-.dirty-pill { padding: 2px 9px; color: var(--warning); border: 1px dashed color-mix(in srgb, var(--warning) 45%, transparent); border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+.dirty-pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; color: var(--warning); border: 1px dashed color-mix(in srgb, var(--warning) 45%, transparent); border-radius: 999px; font-size: 11.5px; font-weight: 600; }
 .doc-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; color: var(--muted-foreground); font-size: 12px; }
 .doc-meta span { display: inline-flex; align-items: center; gap: 5px; }
 .doc-meta svg { color: var(--subtle-foreground); }
@@ -407,7 +414,7 @@ onBeforeUnmount(() => observer?.disconnect());
 .save-bar { position: sticky; z-index: 9; bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px 10px 18px; border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border)); border-radius: var(--radius-xl); background: color-mix(in srgb, var(--surface-elevated) 94%, transparent); backdrop-filter: blur(10px); box-shadow: var(--shadow-lg); animation: stagger-in .2s var(--ease) both; }
 .save-hint { display: flex; align-items: center; gap: 8px; color: var(--muted-foreground); font-size: 12.5px; }
 .save-hint kbd { padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--muted); font: 500 11px var(--font-sans); }
-.save-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 0 3px var(--warning-soft); }
+.save-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 0 3px var(--warning-soft); }
 
 @media (max-width: 1200px) {
   .doc-layout { grid-template-columns: minmax(0, 1fr); }

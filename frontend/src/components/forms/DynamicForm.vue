@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { AlertCircle, ChevronDown } from 'lucide-vue-next';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { AlertCircle, ChevronDown, MoreHorizontal } from 'lucide-vue-next';
 import FieldRenderer from '@/components/forms/FieldRenderer.vue';
 import { buildLayout, evaluateCondition, fieldState, isTruthyValue, NO_VALUE_TYPES, TABLE_TYPES, type FormSectionLayout, type ValidationError } from '@/lib/doctype';
 import { applyFetchFrom } from '@/lib/fetch-from';
@@ -72,6 +72,36 @@ const visibleTabs = computed(() => tabs.value
 
 const currentTab = computed(() => visibleTabs.value.find((tab) => tab.key === activeTab.value) ?? visibleTabs.value[0]);
 
+// More than five tabs: the first four stay inline, the rest move into a "More" menu.
+const MAX_INLINE_TABS = 5;
+const inlineTabs = computed(() => (visibleTabs.value.length > MAX_INLINE_TABS ? visibleTabs.value.slice(0, MAX_INLINE_TABS - 1) : visibleTabs.value));
+const overflowTabs = computed(() => (visibleTabs.value.length > MAX_INLINE_TABS ? visibleTabs.value.slice(MAX_INLINE_TABS - 1) : []));
+const activeOverflowTab = computed(() => overflowTabs.value.find((tab) => tab.key === currentTab.value?.key));
+const moreTabsOpen = ref(false);
+const moreButton = ref<HTMLButtonElement | null>(null);
+const moreMenu = ref<HTMLElement | null>(null);
+// The tab strip scrolls sideways (and clips), so the menu is fixed-positioned under its button.
+const menuPosition = ref({ top: 0, right: 0 });
+const closeMoreTabs = () => { moreTabsOpen.value = false; };
+async function toggleMoreTabs() {
+  if (moreTabsOpen.value) { closeMoreTabs(); return; }
+  const rect = moreButton.value?.getBoundingClientRect();
+  if (!rect) return;
+  menuPosition.value = { top: rect.bottom + 6, right: Math.max(8, window.innerWidth - rect.right) };
+  moreTabsOpen.value = true;
+  await nextTick();
+  moreMenu.value?.querySelector<HTMLButtonElement>('button')?.focus();
+}
+watch(moreTabsOpen, (open) => {
+  if (open) { window.addEventListener('scroll', closeMoreTabs, true); window.addEventListener('resize', closeMoreTabs); }
+  else { window.removeEventListener('scroll', closeMoreTabs, true); window.removeEventListener('resize', closeMoreTabs); }
+});
+onBeforeUnmount(closeMoreTabs);
+function pickTab(key: string) {
+  activeTab.value = key;
+  if (moreTabsOpen.value) { closeMoreTabs(); moreButton.value?.focus(); }
+}
+
 function tabHasError(tab: (typeof visibleTabs.value)[number]) {
   return tab.sections.some((section) => section.visible.some((column) => column.some((field) => errorFields.value.has(field.fieldname) || errorTables.value.has(field.fieldname))));
 }
@@ -91,7 +121,24 @@ watch(() => props.errors, (errors) => {
 });
 
 // Collapsible sections start closed unless collapsible_depends_on says otherwise;
-// a user's explicit open/close then wins.
+// a user's explicit open/close then wins, and is remembered per DocType on this device.
+const sectionStorageKey = computed(() => `erp-form-sections:${props.doctype}`);
+watch(sectionStorageKey, (key) => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || '[]');
+    expanded.value = new Set(Array.isArray(saved) ? saved.filter((entry): entry is string => typeof entry === 'string') : []);
+  } catch { expanded.value = new Set(); }
+}, { immediate: true });
+function rememberSections() {
+  try { localStorage.setItem(sectionStorageKey.value, JSON.stringify([...expanded.value])); } catch { /* storage unavailable: lasts this visit */ }
+}
+// Sections mid-animation keep clipping their content; afterwards an open section must
+// not clip (link-field dropdowns overflow it).
+const animating = ref<Set<string>>(new Set());
+function animationDone(key: string) {
+  if (!animating.value.has(key)) return;
+  const next = new Set(animating.value); next.delete(key); animating.value = next;
+}
 function isCollapsed(section: FormSectionLayout) {
   if (!section.collapsible || expanded.value.has(section.key)) return false;
   if (expanded.value.has(`${section.key}:closed`)) return true;
@@ -103,6 +150,8 @@ function toggleSection(section: FormSectionLayout) {
   if (isCollapsed(section)) { next.add(section.key); next.delete(`${section.key}:closed`); }
   else { next.delete(section.key); next.add(`${section.key}:closed`); }
   expanded.value = next;
+  animating.value = new Set([...animating.value, section.key]);
+  rememberSections();
 }
 
 function update(field: ERPNextMetadataField, value: unknown) {
@@ -129,17 +178,47 @@ defineExpose({ tabs: visibleTabs, activeTab });
   <div :class="['dynamic-form', { 'dynamic-form--dense': dense }]">
     <nav v-if="visibleTabs.length > 1" class="form-tabs" role="tablist" :aria-label="`${doctype} sections`">
       <button
-        v-for="tab in visibleTabs"
+        v-for="tab in inlineTabs"
         :key="tab.key"
         type="button"
         role="tab"
         :aria-selected="tab.key === currentTab?.key"
         :class="['form-tab', { 'form-tab--active': tab.key === currentTab?.key }]"
-        @click="activeTab = tab.key"
+        @click="pickTab(tab.key)"
       >
         {{ tab.label }}<span v-if="tabHasError(tab)" class="form-tab-error" aria-label="has errors" />
       </button>
+      <div v-if="overflowTabs.length" class="form-tab-more">
+        <button
+          ref="moreButton"
+          type="button"
+          :class="['form-tab', { 'form-tab--active': activeOverflowTab }]"
+          aria-haspopup="menu"
+          :aria-expanded="moreTabsOpen"
+          :aria-label="activeOverflowTab ? `More sections, showing ${activeOverflowTab.label}` : 'More sections'"
+          @click="toggleMoreTabs"
+        >
+          {{ activeOverflowTab?.label || 'More' }}<MoreHorizontal :size="14" /><span v-if="overflowTabs.some(tabHasError)" class="form-tab-error" aria-label="has errors" />
+        </button>
+      </div>
     </nav>
+    <Teleport to="body">
+      <div v-if="moreTabsOpen" class="form-tab-scrim" @click="closeMoreTabs" />
+      <Transition name="pop">
+        <div
+          v-if="moreTabsOpen"
+          ref="moreMenu"
+          class="form-tab-menu"
+          role="menu"
+          :style="{ top: `${menuPosition.top}px`, right: `${menuPosition.right}px` }"
+          @keydown.esc="closeMoreTabs(); moreButton?.focus()"
+        >
+          <button v-for="tab in overflowTabs" :key="tab.key" type="button" role="menuitem" :class="{ active: tab.key === currentTab?.key }" @click="pickTab(tab.key)">
+            {{ tab.label }}<span v-if="tabHasError(tab)" class="form-tab-error" aria-label="has errors" />
+          </button>
+        </div>
+      </Transition>
+    </Teleport>
 
     <div v-if="!visibleTabs.length" class="form-empty">{{ hideEmpty ? 'No values recorded yet.' : 'This DocType has no fields to show.' }}</div>
 
@@ -155,7 +234,13 @@ defineExpose({ tabs: visibleTabs, activeTab });
           <p v-if="section.description && !isCollapsed(section)" v-html="sanitizeHtml(section.description)" />
         </header>
 
-        <div v-show="!isCollapsed(section)" class="section-grid" :style="{ '--form-columns': section.visible.length }">
+        <div
+          :class="['section-body', { 'section-body--closed': isCollapsed(section), 'section-body--clip': isCollapsed(section) || animating.has(section.key) }]"
+          :inert="isCollapsed(section)"
+          @transitionend.self="animationDone(section.key)"
+        >
+        <div class="section-body-inner">
+        <div class="section-grid" :style="{ '--form-columns': section.visible.length }">
           <div v-for="(column, columnIndex) in section.visible" :key="columnIndex" class="section-column">
             <div
               v-for="field in column"
@@ -185,6 +270,8 @@ defineExpose({ tabs: visibleTabs, activeTab });
             </div>
           </div>
         </div>
+        </div>
+        </div>
       </section>
     </div>
   </div>
@@ -200,6 +287,14 @@ defineExpose({ tabs: visibleTabs, activeTab });
 .form-tab:hover { color: var(--foreground); background: var(--muted); }
 .form-tab--active { color: var(--primary-soft-foreground); background: var(--primary-soft); font-weight: 600; }
 .form-tab-error { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }
+.form-tab-more { position: relative; flex: none; }
+.form-tab-more svg { color: var(--subtle-foreground); }
+.form-tab-scrim { position: fixed; z-index: 29; inset: 0; }
+.form-tab-menu { position: fixed; z-index: 30; display: flex; min-width: 200px; max-width: calc(100vw - 16px); flex-direction: column; padding: 5px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-elevated); box-shadow: var(--shadow-lg); }
+.form-tab-menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 34px; padding: 0 10px; color: var(--foreground); border: 0; border-radius: var(--radius-md); background: none; font-size: 13px; text-align: left; }
+.form-tab-menu button:hover { background: var(--muted); }
+.form-tab-menu button:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
+.form-tab-menu button.active { color: var(--primary-soft-foreground); background: var(--primary-soft); font-weight: 600; }
 
 .form-sections { display: flex; flex-direction: column; gap: 14px; }
 .form-section { padding: 18px 20px 20px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); }
@@ -212,19 +307,24 @@ defineExpose({ tabs: visibleTabs, activeTab });
 .section-toggle { display: flex; align-items: center; gap: 4px; width: 100%; padding: 0; border: 0; background: none; text-align: left; }
 .section-toggle h3 { padding-left: 4px; }
 .section-toggle h3::before { display: none; }
-.section-caret { flex: none; color: var(--primary); transition: transform .15s var(--ease); }
+.section-caret { flex: none; color: var(--primary); transition: transform var(--dur-med) var(--ease); }
+.section-toggle:focus-visible { outline: var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
 .section-caret--closed { transform: rotate(-90deg); }
 .section-count { margin-left: auto; color: var(--subtle-foreground); font-size: 12px; }
-.form-section:has(.section-caret--closed) .section-head { margin-bottom: 0; }
+.form-section:has(.section-caret--closed) .section-head { margin-bottom: 0; transition: margin-bottom var(--dur-med) var(--ease); }
+.section-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--dur-med) var(--ease), opacity var(--dur-med) var(--ease); }
+.section-body--closed { grid-template-rows: 0fr; opacity: 0; }
+.section-body-inner { min-height: 0; }
+.section-body--clip > .section-body-inner { overflow: hidden; }
 
 .section-grid { display: grid; grid-template-columns: repeat(var(--form-columns, 1), minmax(0, 1fr)); gap: 0 24px; }
 .section-column { display: flex; min-width: 0; flex-direction: column; gap: 14px; }
 .form-field { display: flex; min-width: 0; flex-direction: column; gap: 5px; }
 .field-label { display: flex; align-items: baseline; gap: 2px; color: var(--muted-foreground); font-size: 12px; font-weight: 500; }
 .form-field:focus-within .field-label { color: var(--primary-soft-foreground); }
-.field-required { color: var(--danger); font-weight: 600; }
+.field-required { margin-left: 2px; color: var(--danger); font-weight: 600; }
 .form-field--bold .field-label { color: var(--foreground); font-weight: 600; }
-.field-help { color: var(--subtle-foreground); font-size: 11.5px; line-height: 1.4; }
+.field-help { color: var(--help-foreground); font-size: 11.5px; line-height: 1.4; }
 .field-error { display: flex; align-items: center; gap: 4px; color: var(--danger); font-size: 11.5px; font-weight: 500; }
 .form-field--invalid .field-label { color: var(--danger); }
 .form-empty { padding: 32px; color: var(--muted-foreground); font-size: 13px; text-align: center; }
