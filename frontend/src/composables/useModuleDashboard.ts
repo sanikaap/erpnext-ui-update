@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue';
+import { reactive, ref, watch, type Ref } from 'vue';
 import { documentApi } from '@/services/document-api';
 import { getDocTypeMetadata } from '@/services/metadata-api';
 import { moduleDashboards } from '@/config/module-dashboards';
@@ -20,6 +20,12 @@ const WEEKS = 8;
 const safe = async <T>(task: Promise<T>): Promise<T | null> => { try { return await task; } catch { return null; } };
 const weekStart = (date: Date) => { const copy = new Date(date); copy.setHours(0, 0, 0, 0); copy.setDate(copy.getDate() - ((copy.getDay() + 6) % 7)); return copy; };
 const iso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+/**
+ * Record counts by item path, kept from the last module overview that loaded them,
+ * so the sidebar can show them without making its own requests.
+ */
+export const recordCounts = reactive<Record<string, number | null>>({});
 
 export function useModuleDashboard(module: Ref<VisibleModule | undefined>) {
   const loading = ref(true);
@@ -100,6 +106,7 @@ export function useModuleDashboard(module: Ref<VisibleModule | undefined>) {
     if (id !== run) return;
     kpis.value = kpiValues;
     counts.value = Object.fromEntries(countValues);
+    Object.assign(recordCounts, counts.value);
     statusMix.value = mix;
     statusDoctype.value = primary ?? '';
     activityLabels.value = weeks.map((week) => week.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }));

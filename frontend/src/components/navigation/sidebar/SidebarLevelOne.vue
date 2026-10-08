@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { BookOpen, LayoutDashboard, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-vue-next';
 import SidebarModuleItem from './SidebarModuleItem.vue';
@@ -27,9 +27,16 @@ const layout = useLayoutStore();
 const tip = ref<{ label: string; top: number } | null>(null);
 function showTip(label: string, event: Event, compact: boolean) {
   if (!compact) return;
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const target = event.currentTarget as HTMLElement;
+  // Focus shows the tip for keyboard users only; a mouse click must not leave it behind.
+  if (event.type === 'focus' && !target.matches(':focus-visible')) return;
+  const rect = target.getBoundingClientRect();
   tip.value = { label, top: rect.top + rect.height / 2 };
 }
+const hideTip = () => { tip.value = null; };
+// A tip whose trigger re-renders never gets its mouseleave, so it would stay
+// painted over the Level-2 panel; drop it whenever the page changes.
+watch(() => route.fullPath, hideTip);
 </script>
 
 <template>
@@ -45,19 +52,18 @@ function showTip(label: string, event: Event, compact: boolean) {
     </div>
 
     <div class="search-row">
-      <button type="button" :class="['search', { compact }]" aria-label="Search (Ctrl+K)" @click="layout.paletteOpen = true" @mouseenter="showTip('Search  ⌘K', $event, compact)" @mouseleave="tip = null">
+      <button type="button" :class="['search', { compact }]" aria-label="Search (Ctrl+K)" @click="layout.paletteOpen = true" @mouseenter="showTip('Search  ⌘K', $event, compact)" @mouseleave="hideTip" @focus="showTip('Search  ⌘K', $event, compact)" @blur="hideTip" @pointerdown="hideTip">
         <Search :size="15" /><template v-if="!compact"><span>Search</span><kbd>⌘K</kbd></template>
       </button>
     </div>
 
-    <nav class="level-one-scroll" aria-label="Modules" @scroll="tip = null">
+    <nav class="level-one-scroll" aria-label="Modules" @scroll="hideTip">
       <RouterLink
         to="/"
         :class="['overview', { active: route.path === '/', compact }]"
         :aria-label="compact ? 'Overview' : undefined"
         @click="emit('navigate')"
-        @mouseenter="showTip('Overview', $event, compact)"
-        @mouseleave="tip = null"
+        @mouseenter="showTip('Overview', $event, compact)" @mouseleave="hideTip" @focus="showTip('Overview', $event, compact)" @blur="hideTip" @pointerdown="hideTip"
       >
         <LayoutDashboard :size="compact ? 18 : 17" :stroke-width="1.9" />
         <span v-if="!compact">Overview</span>
@@ -77,20 +83,19 @@ function showTip(label: string, event: Event, compact: boolean) {
           :compact="compact"
           :data-testid="`link-module-${module.key}`"
           @select="emit('select', module.key)"
-          @mouseenter="showTip(`${workspace.label} · ${module.label}`, $event, compact)"
-          @mouseleave="tip = null"
+          @mouseenter="showTip(`${workspace.label} · ${module.label}`, $event, compact)" @mouseleave="hideTip" @focus="showTip(`${workspace.label} · ${module.label}`, $event, compact)" @blur="hideTip" @pointerdown="hideTip"
         />
       </template>
     </nav>
 
     <footer :class="['level-one-foot', { compact }]">
-      <a class="foot-link" href="https://docs.erpnext.com" target="_blank" rel="noopener noreferrer" aria-label="ERPNext documentation" @mouseenter="showTip('Help & documentation', $event, compact)" @mouseleave="tip = null">
+      <a class="foot-link" href="https://docs.erpnext.com" target="_blank" rel="noopener noreferrer" aria-label="ERPNext documentation" @mouseenter="showTip('Help & documentation', $event, compact)" @mouseleave="hideTip" @focus="showTip('Help & documentation', $event, compact)" @blur="hideTip" @pointerdown="hideTip">
         <BookOpen :size="16" /><span v-if="!compact">Help &amp; docs</span>
       </a>
-      <RouterLink v-for="entry in utilityNavigation" :key="entry.path" :to="entry.path" :class="['foot-link', { active: route.path === entry.path }]" :aria-label="entry.label" @click="emit('navigate')" @mouseenter="showTip(entry.label, $event, compact)" @mouseleave="tip = null">
+      <RouterLink v-for="entry in utilityNavigation" :key="entry.path" :to="entry.path" :class="['foot-link', { active: route.path === entry.path }]" :aria-label="entry.label" @click="emit('navigate')" @mouseenter="showTip(entry.label, $event, compact)" @mouseleave="hideTip" @focus="showTip(entry.label, $event, compact)" @blur="hideTip" @pointerdown="hideTip">
         <component :is="entry.icon" :size="16" /><span v-if="!compact">{{ entry.label }}</span>
       </RouterLink>
-      <button v-if="showCollapseToggle && compact && collapsed" type="button" class="foot-link" aria-label="Expand sidebar" @click="emit('toggleCollapse')" @mouseenter="showTip('Expand sidebar', $event, compact)" @mouseleave="tip = null">
+      <button v-if="showCollapseToggle && compact && collapsed" type="button" class="foot-link" aria-label="Expand sidebar" @click="emit('toggleCollapse')" @mouseenter="showTip('Expand sidebar', $event, compact)" @mouseleave="hideTip" @focus="showTip('Expand sidebar', $event, compact)" @blur="hideTip" @pointerdown="hideTip">
         <PanelLeftOpen :size="16" />
       </button>
     </footer>
@@ -123,12 +128,13 @@ function showTip(label: string, event: Event, compact: boolean) {
 
 .level-one-scroll { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 1px; overflow-x: hidden; overflow-y: auto; padding: 4px 10px 12px; scrollbar-width: none; }
 .compact .level-one-scroll { align-items: center; gap: 4px; padding: 4px 0 12px; }
-.workspace-label { margin: 16px 0 6px; padding: 0 10px; color: var(--nav-subtle); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
-.workspace-rule { width: 24px; height: 1px; flex: none; margin: 8px 0; background: var(--nav-border); }
+.workspace-label { user-select: none; margin: 18px 0 6px; padding: 0 10px; color: var(--nav-subtle); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.workspace-rule { width: 28px; height: 1px; flex: none; margin: 10px 0 6px; background: var(--nav-border); }
 
-.overview { position: relative; display: flex; align-items: center; gap: 11px; height: 36px; padding: 0 10px; color: var(--nav-muted); border-radius: 8px; font-size: 13.5px; font-weight: 500; transition: background-color .12s, color .12s; }
+.overview { position: relative; display: flex; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; align-items: center; gap: 11px; height: 36px; padding: 0 10px; color: var(--nav-muted); border-radius: 8px; font-size: 13.5px; font-weight: 500; transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .overview svg { flex: none; color: var(--nav-accent); }
 .overview:hover { color: var(--nav-fg); background: var(--nav-hover); }
+.overview:focus-visible, .foot-link:focus-visible, .search:focus-visible, .icon-btn:focus-visible, .brand:focus-visible { outline: 2px solid var(--nav-accent); outline-offset: -2px; }
 .overview.active { color: #fff; background: var(--nav-active-bg); font-weight: 600; }
 .overview.active::before { position: absolute; top: 8px; bottom: 8px; left: 0; width: 3px; content: ''; border-radius: 0 3px 3px 0; background: var(--nav-accent); }
 .overview.compact { justify-content: center; width: 42px; height: 42px; padding: 0; border-radius: 10px; }
@@ -136,7 +142,7 @@ function showTip(label: string, event: Event, compact: boolean) {
 
 .level-one-foot { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px 12px; border-top: 1px solid var(--nav-border); }
 .level-one-foot.compact { align-items: center; gap: 4px; padding: 8px 0 12px; }
-.foot-link { display: flex; align-items: center; gap: 11px; height: 34px; padding: 0 10px; color: var(--nav-muted); border: 0; border-radius: 8px; background: none; font-size: 13px; font-weight: 500; }
+.foot-link { user-select: none; -webkit-user-select: none; -webkit-user-drag: none; display: flex; align-items: center; gap: 11px; height: 34px; padding: 0 10px; color: var(--nav-muted); border: 0; border-radius: 8px; background: none; font-size: 13px; font-weight: 500; }
 .foot-link svg { flex: none; color: var(--nav-subtle); }
 .foot-link:hover { color: var(--nav-fg); background: var(--nav-hover); }
 .foot-link:hover svg { color: var(--nav-fg); }

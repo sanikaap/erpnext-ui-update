@@ -3,7 +3,8 @@ import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ArrowLeft, FileSpreadsheet, LayoutGrid, Search, X } from 'lucide-vue-next';
 import SidebarSection from './SidebarSection.vue';
-import type { VisibleModule } from '@/composables/useNavigation';
+import { modulePageCount, type VisibleModule } from '@/composables/useNavigation';
+import { recordCounts } from '@/composables/useModuleDashboard';
 import type { NavigationItem } from '@/types/erp';
 
 /**
@@ -27,6 +28,8 @@ const sections = computed(() => {
   return result;
 });
 const itemCount = computed(() => sections.value.reduce((sum, section) => sum + section.items.length, 0));
+const pageCount = computed(() => modulePageCount(props.module));
+const kind = computed(() => (props.module.type === 'custom' ? props.module.workspace : 'ERPNext'));
 
 const filtered = computed(() => {
   const needle = query.value.trim().toLowerCase();
@@ -57,10 +60,10 @@ const isActive = (item: NavigationItem) => item.path === activePath.value;
     </header>
 
     <div class="module-title">
-      <span class="module-badge"><component :is="module.icon" :size="17" :stroke-width="2" /></span>
+      <span class="module-badge" aria-hidden="true"><component :is="module.icon" :size="17" :stroke-width="2" /></span>
       <div class="module-copy">
         <h2>{{ module.label }}</h2>
-        <p>{{ module.type === 'custom' ? module.workspace : 'ERPNext' }} · {{ itemCount }} pages</p>
+        <p><span class="module-kind">{{ kind }}</span>{{ pageCount }} {{ pageCount === 1 ? 'page' : 'pages' }}</p>
       </div>
     </div>
 
@@ -73,7 +76,7 @@ const isActive = (item: NavigationItem) => item.path === activePath.value;
     <div class="level-two-scroll">
       <SidebarSection v-if="!query" :items="[overview]" :is-active="isActive" @navigate="emit('navigate')" />
       <!-- A section named like the module continues the module's own heading. -->
-      <SidebarSection v-for="section in filtered" :key="section.label" :label="section.label === module.label ? undefined : section.label" :items="section.items" :is-active="isActive" @navigate="emit('navigate')" />
+      <SidebarSection v-for="section in filtered" :key="section.label" :label="section.label === module.label ? undefined : section.label" :items="section.items" :is-active="isActive" :counts="recordCounts" @navigate="emit('navigate')" />
       <p v-if="query && !filtered.length" class="no-match">No pages match “{{ query }}”.</p>
     </div>
   </div>
@@ -84,7 +87,7 @@ const isActive = (item: NavigationItem) => item.path === activePath.value;
 .level-two.floating { border-right: 1px solid var(--nav-border); box-shadow: 12px 0 32px -12px rgba(0, 0, 0, .45); }
 .level-two-head { display: flex; align-items: center; gap: 6px; height: var(--topbar-height); flex: none; padding: 0 12px; }
 .back { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 10px 0 8px; color: var(--nav-muted); border: 0; border-radius: 7px; background: none; font-size: 12.5px; font-weight: 600; }
-.back svg { transition: transform .15s var(--ease); }
+.back svg { transition: transform var(--dur-fast) var(--ease); }
 .back:hover { color: var(--nav-fg); background: var(--nav-hover); }
 .back:hover svg { transform: translateX(-2px); }
 .back:focus-visible, .close:focus-visible { outline: 2px solid var(--nav-accent); outline-offset: 1px; }
@@ -95,7 +98,8 @@ const isActive = (item: NavigationItem) => item.path === activePath.value;
 .module-badge { display: grid; width: 36px; height: 36px; flex: none; place-items: center; color: #062a2b; border-radius: 10px; background: var(--c); }
 .module-copy { min-width: 0; }
 .module-copy h2 { overflow: hidden; color: #fff; font-size: 16px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
-.module-copy p { margin-top: 2px; color: var(--nav-subtle); font-size: 11.5px; }
+.module-copy p { display: flex; align-items: center; gap: 6px; margin-top: 3px; color: var(--nav-subtle); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.module-kind { padding: 0 6px; color: var(--nav-muted); border: 1px solid var(--nav-border); border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: .06em; line-height: 16px; text-transform: uppercase; }
 
 .filter { display: flex; align-items: center; gap: 8px; height: 32px; margin: 0 12px 10px; padding: 0 8px 0 10px; color: var(--nav-subtle); border: 1px solid var(--nav-border); border-radius: 8px; background: var(--nav-input); }
 .filter:focus-within { border-color: var(--nav-accent); color: var(--nav-accent); }

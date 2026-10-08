@@ -23,7 +23,7 @@ const emit = defineEmits<{ select: [] }>();
 </template>
 
 <style scoped>
-.module-item { position: relative; display: flex; align-items: center; gap: 11px; width: 100%; height: 36px; padding: 0 10px; color: var(--nav-muted); border: 0; border-radius: 8px; background: none; font-size: 13.5px; font-weight: 500; text-align: left; white-space: nowrap; transition: background-color .12s, color .12s; }
+.module-item { position: relative; display: flex; user-select: none; -webkit-user-select: none; align-items: center; gap: 11px; width: 100%; height: 36px; padding: 0 10px; color: var(--nav-muted); border: 0; border-radius: 8px; background: none; font-size: 13.5px; font-weight: 500; text-align: left; white-space: nowrap; transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .module-item:hover { color: var(--nav-fg); background: var(--nav-hover); }
 .module-item:focus-visible { outline: 2px solid var(--nav-accent); outline-offset: -2px; }
 .module-icon { display: grid; width: 20px; flex: none; place-items: center; color: var(--c); }
@@ -37,6 +37,7 @@ const emit = defineEmits<{ select: [] }>();
 /* Icon rail */
 .compact { justify-content: center; width: 42px; height: 42px; margin: 0 auto; padding: 0; border-radius: 10px; }
 .compact .module-icon { width: auto; }
-.compact.active, .compact.open { background: var(--nav-active-bg); }
+.compact.open:not(.active) { background: var(--nav-hover); }
+.compact.active { background: var(--nav-active-bg); }
 .compact.active::before { top: 11px; bottom: 11px; left: -13px; }
 </style>

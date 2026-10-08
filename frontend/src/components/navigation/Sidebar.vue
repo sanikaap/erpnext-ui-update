@@ -76,7 +76,8 @@ watch(() => isMobile.value && layout.mobileSidebarOpen, (opened) => {
     :class="['sidebar', { 'sidebar-open': open, 'sidebar--rail': railMode, 'sidebar--docked': openModule && !floating && !isMobile }]"
     aria-label="Sidebar"
   >
-    <div class="sidebar-level sidebar-level--one">
+    <!-- On mobile, Level 2 covers Level 1 completely: keep the hidden level out of the tab order. -->
+    <div class="sidebar-level sidebar-level--one" :inert="isMobile && Boolean(openModule)">
       <SidebarLevelOne
         :workspaces="workspaces"
         :compact="railMode"
@@ -115,10 +116,10 @@ watch(() => isMobile.value && layout.mobileSidebarOpen, (opened) => {
 .sidebar-level--two.floating { position: absolute; top: 0; bottom: 0; left: var(--sidebar-rail-width); }
 .float-scrim { position: fixed; z-index: 1; inset: 0 0 0 calc(var(--sidebar-rail-width) + 236px); }
 
-.slide-enter-active, .slide-leave-active { transition: opacity .2s ease, transform .22s var(--ease); }
+.slide-enter-active, .slide-leave-active { transition: opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease); }
 .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateX(-12px); }
-.slide-leave-active { position: absolute; top: 0; bottom: 0; left: var(--sidebar-rail-width); }
-.float-enter-active, .float-leave-active { transition: opacity .16s ease, transform .2s var(--ease); }
+.slide-leave-active { pointer-events: none; position: absolute; top: 0; bottom: 0; left: var(--sidebar-rail-width); }
+.float-enter-active, .float-leave-active { transition: opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease); }
 .float-enter-from, .float-leave-to { opacity: 0; transform: translateX(-10px); }
 
 @media (max-width: 900px) {

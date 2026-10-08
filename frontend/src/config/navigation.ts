@@ -149,7 +149,8 @@ export const navigationModules: NavModuleConfig[] = [
     ],
   },
   {
-    id: 'projects', label: 'Projects', icon: FolderKanban, color: '--mod-projects', type: 'erpnext', workspace: 'ERPNext', reportModules: ['Projects'],
+    // Labelled "Project Mgmt" to tell it apart from the NGO "Projects" module (id and routes unchanged).
+    id: 'projects', label: 'Project Mgmt', icon: FolderKanban, color: '--mod-projects', type: 'erpnext', workspace: 'ERPNext', reportModules: ['Projects'],
     sections: [
       { label: 'Projects', items: [list('Projects', 'Project', BriefcaseBusiness, '/projects/projects'), list('Tasks', 'Task', ListChecks, '/projects/tasks'), list('Timesheets', 'Timesheet', CalendarClock, '/projects/timesheets'), list('Activity Types', 'Activity Type', SlidersHorizontal, '/projects/activity-types')] },
       { label: 'Reports', items: [report('Project Summary', 'Project Summary')] },

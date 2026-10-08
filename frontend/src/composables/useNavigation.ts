@@ -41,6 +41,15 @@ export interface VisibleModule extends ModuleDefinition {
   visibleSections: { label: string; items: NavigationItem[] }[];
 }
 
+/**
+ * Number of pages a module offers: its visible configured items (Overview and the
+ * synthetic "All reports" link are not counted). The sidebar and the module page
+ * both use this, so they always agree.
+ */
+export function modulePageCount(module: VisibleModule) {
+  return module.visibleSections.reduce((sum, section) => sum + section.items.length, 0);
+}
+
 export function useNavigation() {
   if (!pending) pending = loadAvailability();
   const ready = computed(() => loaded.value);

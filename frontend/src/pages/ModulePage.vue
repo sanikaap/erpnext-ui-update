@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Clock3, FileSpreadsheet, Layers3, Plus } from 'lucide-vue-next';
 import { RouterLink, useRouter } from 'vue-router';
 import { useRoute } from 'vue-router';
-import { useNavigation } from '@/composables/useNavigation';
+import { modulePageCount, useNavigation } from '@/composables/useNavigation';
 import { useModuleDashboard } from '@/composables/useModuleDashboard';
 import { moduleDashboards } from '@/config/module-dashboards';
 import { isStaticDocType } from '@/services/static-data';
@@ -36,7 +36,7 @@ const canCreate = ref(false);
 watch(primaryDoctype, async (doctype) => { canCreate.value = doctype ? await hasDocTypePermission(doctype, 'create') : false; }, { immediate: true });
 
 const money = (value: number) => (value >= 100000 ? lakh(value) : `₹${Math.round(value / 1000)}k`);
-const pageCount = computed(() => module.value?.visibleSections.reduce((sum, section) => sum + section.items.length, 0) ?? 0);
+const pageCount = computed(() => (module.value ? modulePageCount(module.value) : 0));
 const hasActivity = computed(() => dashboard.activitySeries.value.some((series) => series.data.some(Boolean)));
 const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-blue', green: 'tone-green', amber: 'tone-amber', rose: 'tone-rose', cyan: 'tone-cyan', slate: 'tone-slate' };
 </script>

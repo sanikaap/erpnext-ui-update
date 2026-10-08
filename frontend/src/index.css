@@ -368,6 +368,9 @@ select.control {
 }
 input[type=checkbox], input[type=radio] { accent-color: var(--primary); }
 
+/* The navigation surface is dark in both themes: selected text must stay legible there. */
+.sidebar ::selection { background: var(--nav-active-bg); color: var(--nav-active-fg); }
+
 /* Module hues on the dark navigation surface use their light variants in both themes. */
 .sidebar {
   --mod-crm: #f9a8d4; --mod-selling: #c4b5fd; --mod-buying: #93c5fd; --mod-accounts: #6ee7b7;
