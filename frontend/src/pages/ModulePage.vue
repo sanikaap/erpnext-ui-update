@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Clock3, FileSpreadsheet, Layers3, Plus } from 'lucide-vue-next';
+import { ArrowUpRight, BarChart3, ChevronRight, Clock3, FileSpreadsheet, Layers3, Plus } from 'lucide-vue-next';
 import { RouterLink, useRouter } from 'vue-router';
 import { useRoute } from 'vue-router';
 import { modulePageCount, useNavigation } from '@/composables/useNavigation';
@@ -37,7 +37,30 @@ watch(primaryDoctype, async (doctype) => { canCreate.value = doctype ? await has
 
 const money = (value: number) => (value >= 100000 ? lakh(value) : `₹${Math.round(value / 1000)}k`);
 const pageCount = computed(() => (module.value ? modulePageCount(module.value) : 0));
-const hasActivity = computed(() => dashboard.activitySeries.value.some((series) => series.data.some(Boolean)));
+const hasActivityAtAll = computed(() => dashboard.activitySeries.value.some((series) => series.data.some(Boolean)));
+// A chart needs at least two weeks with activity; a lone bar reads as "empty" anyway.
+const hasActivity = computed(() => dashboard.activityLabels.value.filter((_, week) => dashboard.activitySeries.value.some((series) => series.data[week])).length >= 2);
+
+/** Browse cards, grouped exactly like the module's Level-2 sidebar (including "All reports"). */
+const browseSections = computed(() => {
+  if (!module.value) return [];
+  const current = module.value;
+  const sections = current.visibleSections.map((section) => ({ label: section.label, items: section.items.map((item) => ({ ...item, allReports: false })) }));
+  if (current.reportModules.length) {
+    const all = { label: 'All reports', path: current.reportsRoute, icon: FileSpreadsheet, description: `Every report in ${current.label}`, allReports: true } as (typeof sections)[number]['items'][number];
+    const reports = sections.find((section) => section.label === 'Reports');
+    if (reports) reports.items.push(all); else sections.push({ label: 'Reports', items: [all] });
+  }
+  return sections;
+});
+type BrowseItem = (typeof browseSections.value)[number]['items'][number];
+function browseDescription(item: BrowseItem) {
+  if (item.description) return item.description;
+  if (item.report) return 'Report';
+  if (item.path.startsWith('/record/')) return 'Settings';
+  if (item.doctype && item.doctype !== item.label) return item.doctype;
+  return item.doctype ? 'Records' : 'Page';
+}
 const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-blue', green: 'tone-green', amber: 'tone-amber', rose: 'tone-rose', cyan: 'tone-cyan', slate: 'tone-slate' };
 </script>
 
@@ -74,6 +97,21 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
       </RouterLink>
     </section>
 
+    <!-- Browse: every page in the module, grouped like the sidebar -->
+    <section class="browse" aria-label="Pages in this module">
+      <div v-for="section in browseSections" :key="section.label" class="browse-section">
+        <h2 class="browse-title">{{ section.label === module.label ? 'Pages' : section.label }}</h2>
+        <div class="browse-grid">
+          <RouterLink v-for="entry in section.items" :key="entry.path" :to="entry.path" class="browse-card">
+            <span class="browse-icon"><component :is="entry.icon" :size="16" /></span>
+            <span class="browse-copy"><strong>{{ entry.label }}</strong><small>{{ browseDescription(entry) }}</small></span>
+            <span v-if="dashboard.counts.value[entry.path] != null" class="browse-count tabular" :aria-label="`${dashboard.counts.value[entry.path]} records`">{{ dashboard.counts.value[entry.path]!.toLocaleString() }}</span>
+            <ArrowUpRight v-else-if="entry.report || entry.allReports" :size="14" class="browse-go" />
+          </RouterLink>
+        </div>
+      </div>
+    </section>
+
     <!-- Charts -->
     <section class="dash-grid">
       <template v-if="ngo">
@@ -101,8 +139,8 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
             <div v-if="hasActivity" class="legend"><span v-for="series in dashboard.activitySeries.value" :key="series.name"><i :style="{ background: `var(${series.color})` }" />{{ series.name }}</span></div>
           </header>
           <span v-if="dashboard.loading.value" class="skeleton" style="height: 240px; border-radius: 10px" />
-          <TrendChart v-else-if="hasActivity" :labels="dashboard.activityLabels.value" :series="dashboard.activitySeries.value" :height="240" />
-          <EmptyState v-else compact :icon="BarChart3" title="No new documents in 8 weeks" :description="`Activity appears here as your team creates ${module.label.toLowerCase()} documents.`" />
+          <TrendChart v-else-if="hasActivity" :labels="dashboard.activityLabels.value" :series="dashboard.activitySeries.value" :height="240" integer />
+          <EmptyState v-else compact :icon="BarChart3" :title="hasActivityAtAll ? 'Not enough activity to chart yet' : 'No new documents in 8 weeks'" :description="`Activity appears here as your team creates ${module.label.toLowerCase()} documents.`" />
         </article>
         <article class="panel">
           <header class="panel-head"><div><h2>Status</h2><p>{{ dashboard.statusDoctype.value || module.label }} by current status</p></div></header>
@@ -113,9 +151,9 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
       </template>
     </section>
 
-    <!-- Recent + browse -->
+    <!-- Recent -->
     <section class="dash-grid">
-      <article class="panel panel--main">
+      <article class="panel panel--wide">
         <header class="panel-head"><div><h2>Latest changes</h2><p>Most recently updated records in {{ module.label }}</p></div></header>
         <div v-if="dashboard.loading.value" class="list-skeleton"><span v-for="index in 5" :key="index" class="skeleton" style="height: 40px; border-radius: 8px" /></div>
         <ul v-else-if="dashboard.recent.value.length" class="recent-list">
@@ -132,21 +170,6 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
         <EmptyState v-else compact :icon="Clock3" title="Nothing here yet" :description="`Records you create in ${module.label} will appear here.`" />
       </article>
 
-      <article class="panel">
-        <header class="panel-head"><div><h2>Browse</h2><p>Everything in {{ module.label }}</p></div></header>
-        <div class="browse">
-          <section v-for="section in module.visibleSections" :key="section.label" class="browse-section">
-            <h3>{{ section.label }}</h3>
-            <RouterLink v-for="entry in section.items" :key="entry.path" :to="entry.path" class="browse-row">
-              <component :is="entry.icon" :size="15" class="browse-icon" />
-              <span>{{ entry.label }}</span>
-              <span v-if="dashboard.counts.value[entry.path] != null" class="browse-count tabular">{{ dashboard.counts.value[entry.path]!.toLocaleString() }}</span>
-              <ArrowUpRight v-else-if="entry.report" :size="13" class="browse-go" />
-            </RouterLink>
-          </section>
-          <RouterLink v-if="module.reportModules.length" :to="module.reportsRoute" class="browse-all">All {{ module.label }} reports<ArrowRight :size="14" /></RouterLink>
-        </div>
-      </article>
     </section>
   </div>
   <div v-else class="page"><EmptyState title="Module not available" description="This module is not installed on this ERPNext site." :icon="Layers3" /></div>
@@ -214,17 +237,20 @@ a.progress-label:hover { color: var(--primary); text-decoration: underline; }
 .recent-row:hover .recent-arrow { color: var(--c); }
 
 /* Browse */
-.browse { display: flex; flex-direction: column; gap: 14px; }
-.browse-section h3 { margin-bottom: 4px; color: var(--subtle-foreground); font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
-.browse-row { display: flex; align-items: center; gap: 10px; height: 32px; margin: 0 -8px; padding: 0 8px; color: var(--foreground); border-radius: 7px; font-size: 13px; }
-.browse-row span:first-of-type { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.browse-row:hover { background: var(--muted); }
-.browse-icon { flex: none; color: var(--c); }
-.browse-count { padding: 0 7px; color: var(--muted-foreground); border-radius: 999px; background: var(--muted); font-size: 11.5px; font-weight: 600; }
-.browse-row:hover .browse-count { background: var(--surface); }
-.browse-go { color: var(--subtle-foreground); }
-.browse-all { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-size: 12.5px; font-weight: 600; }
-.browse-all:hover { text-decoration: underline; }
+.browse { display: flex; flex-direction: column; gap: 16px; }
+.browse-section { display: flex; flex-direction: column; gap: 8px; }
+.browse-title { color: var(--subtle-foreground); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.browse-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.browse-card { display: flex; min-width: 0; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
+.browse-card:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--border)); background: color-mix(in srgb, var(--c) 5%, var(--surface)); }
+.browse-card:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
+.browse-icon { display: grid; width: 32px; height: 32px; flex: none; place-items: center; color: var(--c); border-radius: 9px; background: color-mix(in srgb, var(--c) 13%, transparent); }
+.browse-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; line-height: 1.3; }
+.browse-copy strong { overflow: hidden; color: var(--foreground); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.browse-copy small { overflow: hidden; color: var(--muted-foreground); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.browse-count { flex: none; padding: 0 8px; color: var(--muted-foreground); border-radius: 999px; background: var(--muted); font-size: 11.5px; font-weight: 600; line-height: 20px; }
+.browse-go { flex: none; color: var(--subtle-foreground); }
+.browse-card:hover .browse-go { color: var(--c); }
 
 @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dash-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {

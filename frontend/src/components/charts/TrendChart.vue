@@ -16,7 +16,9 @@ const props = withDefaults(defineProps<{
   type?: 'bar' | 'line';
   height?: number;
   formatValue?: (value: number) => string;
-}>(), { type: 'bar', height: 260 });
+  /** Counts: whole-number axis steps only. */
+  integer?: boolean;
+}>(), { type: 'bar', height: 260, integer: false });
 
 const chartEl = ref<HTMLElement | null>(null);
 const theme = useThemeStore();
@@ -47,7 +49,7 @@ function render() {
       extraCssText: 'border-radius: 10px; box-shadow: 0 8px 24px rgba(20,10,60,.14);',
     },
     xAxis: { type: 'category', data: props.labels, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: axis, fontSize: 11, fontFamily: 'Inter', margin: 10, hideOverlap: true } },
-    yAxis: { type: 'value', splitNumber: 4, axisLabel: { color: axis, fontSize: 11, fontFamily: 'Inter', formatter: (value: number) => format(value) }, splitLine: { lineStyle: { color: grid, type: 'dashed' } } },
+    yAxis: { type: 'value', splitNumber: 4, minInterval: props.integer ? 1 : undefined, axisLabel: { color: axis, fontSize: 11, fontFamily: 'Inter', formatter: (value: number) => format(value) }, splitLine: { lineStyle: { color: grid, type: 'dashed' } } },
     series: props.series.map((entry) => {
       const color = token(entry.color);
       return props.type === 'bar'
