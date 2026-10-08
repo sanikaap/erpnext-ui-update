@@ -24,7 +24,12 @@ const props = withDefaults(defineProps<{
   imageField?: string;
   submittable?: boolean;
   skeletonRows?: number;
-}>(), { rows: () => [], loading: false, selectable: false, selected: () => [], sort: () => [], submittable: false, skeletonRows: 8 });
+  /**
+   * Keep the header visible while rows scroll. The table then scrolls inside its own
+   * area (capped to the viewport) so horizontal scrolling keeps working too.
+   */
+  stickyHeader?: boolean;
+}>(), { rows: () => [], loading: false, selectable: false, selected: () => [], sort: () => [], submittable: false, skeletonRows: 8, stickyHeader: false });
 
 const emit = defineEmits<{ rowClick: [row: FrappeDocument]; 'update:selected': [names: string[]]; 'update:sort': [sort: Sort[]] }>();
 
@@ -74,7 +79,7 @@ function image(row: FrappeDocument) {
 </script>
 
 <template>
-  <div class="table-wrap">
+  <div :class="['table-wrap', { 'table-wrap--sticky': stickyHeader }]">
     <table :aria-busy="loading" data-testid="table-data">
       <thead>
         <tr>
@@ -114,6 +119,7 @@ function image(row: FrappeDocument) {
           v-for="row in rows"
           :key="row.name"
           :class="{ selected: selectedSet.has(row.name) }"
+          :aria-selected="selectable ? selectedSet.has(row.name) : undefined"
           tabindex="0"
           @click="emit('rowClick', row)"
           @keydown.enter="emit('rowClick', row)"
@@ -145,6 +151,7 @@ function image(row: FrappeDocument) {
 
 <style scoped>
 .table-wrap { overflow-x: auto; }
+.table-wrap--sticky { max-height: calc(100dvh - var(--topbar-height) - 32px); overflow: auto; overscroll-behavior: contain; }
 table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
 th { position: sticky; top: 0; z-index: 1; height: 38px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: var(--text-xs); font-weight: 600; letter-spacing: .01em; white-space: nowrap; }
 td { height: 50px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); font-size: var(--text-base); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -174,6 +181,7 @@ tbody tr { cursor: pointer; transition: background-color var(--dur-fast) var(--e
 tbody tr:hover, tbody tr:focus-visible { outline: 0; background: var(--primary-softer); }
 tbody tr:focus-visible { box-shadow: inset 3px 0 var(--primary); }
 tbody tr.selected { background: var(--primary-soft); }
+tbody tr.selected .cell-titles strong { color: var(--primary-soft-foreground); }
 tbody tr.selected td.cell-first { box-shadow: inset 3px 0 var(--primary); }
 tbody.refreshing { opacity: .55; transition: opacity var(--dur-fast) var(--ease); }
 .skeleton-row { cursor: default; }
@@ -184,6 +192,7 @@ tbody tr:hover .cell-open svg { color: var(--primary); opacity: 1; transform: tr
 
 /* Card layout for narrow screens */
 @media (max-width: 720px) {
+  .table-wrap--sticky { max-height: none; overflow: visible; }
   table, thead, tbody, tr, td { display: block; }
   thead { display: none; }
   tbody tr { position: relative; margin: 10px 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }

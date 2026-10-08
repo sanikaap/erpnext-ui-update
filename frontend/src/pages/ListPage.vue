@@ -272,15 +272,16 @@ function clearCriteria() {
             :image-field="meta?.image_field"
             :submittable="Boolean(meta?.is_submittable)"
             :skeleton-rows="Math.min(pageLength, 10)"
+            sticky-header
             @row-click="openRecord"
           />
         </template>
         <EmptyState
           v-else-if="hasCriteria"
-          :title="`No ${title.toLowerCase()} match`"
-          description="Try a different search or remove some filters."
+          :title="`No ${title.toLowerCase()} match ${filters.length ? 'these filters' : 'this search'}`"
+          :description="filters.length && search.trim() ? 'Try a different search or remove some filters.' : filters.length ? 'Remove a filter or clear them all.' : 'Check the spelling or try a shorter search.'"
           :icon="Search"
-        ><BaseButton variant="quiet" size="sm" @click="clearCriteria">Clear search and filters</BaseButton></EmptyState>
+        ><BaseButton variant="quiet" size="sm" @click="clearCriteria"><X :size="14" />{{ filters.length ? 'Clear filters' : 'Clear search' }}</BaseButton></EmptyState>
         <EmptyState
           v-else
           :title="`No ${title} found`"
@@ -337,7 +338,7 @@ function clearCriteria() {
 .pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px 10px 18px; color: var(--muted-foreground); border-top: 1px solid var(--border); font-size: 12.5px; }
 .pagination-controls { display: flex; align-items: center; gap: 6px; }
 .page-size { display: flex; align-items: center; gap: 6px; margin-right: 8px; }
-.page-size select { width: 64px; height: 30px; padding: 0 6px; font-size: 12.5px; }
+.page-size select { width: 70px; height: 30px; padding: 0 24px 0 9px; background-position: right 6px center; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .page-indicator { min-width: 54px; text-align: center; }
 .pagination .tool-button { height: 30px; width: 30px; }
 
