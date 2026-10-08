@@ -459,3 +459,19 @@ export function stripHtml(value: unknown) {
   // DOMParser documents are inert: scripts and event handlers in the value never run.
   return (new DOMParser().parseFromString(value, 'text/html').body.textContent || '').trim();
 }
+
+/**
+ * Short amount for charts and tiles: ₹4.2L / ₹1.3Cr for rupees, $12.4k / $3.1M otherwise.
+ * Full figures belong in tooltips and tables; this is for at-a-glance reading.
+ */
+export function compactCurrency(value: number, currency?: string) {
+  const abs = Math.abs(value);
+  const symbol = currency ? formatCurrency(0, currency, 0).replace(/[\d\s.,]/g, '') : '';
+  const sign = value < 0 ? '−' : '';
+  const trim = (number: number) => number.toFixed(1).replace(/\.0$/, '');
+  if (currency === 'INR' && abs >= 1e7) return `${sign}${symbol}${trim(abs / 1e7)}Cr`;
+  if (currency === 'INR' && abs >= 1e5) return `${sign}${symbol}${trim(abs / 1e5)}L`;
+  if (abs >= 1e6) return `${sign}${symbol}${trim(abs / 1e6)}M`;
+  if (abs >= 1e3) return `${sign}${symbol}${trim(abs / 1e3)}k`;
+  return `${sign}${symbol}${Math.round(abs)}`;
+}

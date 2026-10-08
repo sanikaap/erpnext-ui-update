@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { ArrowUpRight, BarChart3, ChevronRight, Clock3, FileSpreadsheet, Layers3, Plus } from 'lucide-vue-next';
+import { ArrowUpRight, BarChart3, ChevronRight, Clock3, FileSpreadsheet, Layers3, Plus, TrendingUp, Trophy } from 'lucide-vue-next';
 import { RouterLink, useRouter } from 'vue-router';
 import { useRoute } from 'vue-router';
 import { modulePageCount, useNavigation } from '@/composables/useNavigation';
@@ -16,9 +16,11 @@ import SegmentedBar from '@/components/charts/SegmentedBar.vue';
 import BudgetBars from '@/components/charts/BudgetBars.vue';
 import Sparkline from '@/components/charts/Sparkline.vue';
 import ChartPlaceholder from '@/components/charts/ChartPlaceholder.vue';
+import RankBars, { type RankRow } from '@/components/charts/RankBars.vue';
+import { useSessionDefaults } from '@/composables/useSessionDefaults';
 import { ngoOverview, lakh } from '@/ngo/overview';
 import { monogram, monogramTone } from '@/lib/display';
-import { relativeTime } from '@/lib/doctype';
+import { compactCurrency, relativeTime } from '@/lib/doctype';
 
 /**
  * Overview of any module (Level 2 → Overview). One layout for ERPNext and custom
@@ -64,7 +66,26 @@ function browseDescription(item: BrowseItem) {
   return item.doctype ? 'Records' : 'Page';
 }
 /** Weekly creation counts for a KPI's DocType, when the activity chart already loaded them. */
-const kpiSpark = (doctype: string) => dashboard.activitySeries.value.find((series) => series.name === doctype)?.data;
+const kpiSpark = (doctype: string) => dashboard.weekly.value[doctype];
+
+// ---------- Headline trend + ranking (every ERPNext module, from config) ----------
+const { defaults } = useSessionDefaults();
+const currency = computed(() => (defaults.value.currency as string) || undefined);
+const dashConfig = computed(() => (module.value ? moduleDashboards[module.value.key] : undefined));
+const trend = computed(() => dashboard.trend.value);
+const trendFormat = (value: number) => (trend.value?.money ? compactCurrency(value, currency.value) : value.toLocaleString(undefined, { maximumFractionDigits: 1 }));
+// Two or more buckets with figures; fewer reads as "empty" anyway.
+const trendHasData = computed(() => Boolean(trend.value && trend.value.labels.filter((_, index) => trend.value!.series.some((series) => series.data[index])).length >= 2));
+const rankingRows = computed<RankRow[]>(() => {
+  const result = dashboard.ranking.value;
+  if (!result) return [];
+  const [one, many] = result.unit ?? ['', ''];
+  return result.rows.map((row) => ({
+    key: row.key, label: row.label, value: row.value,
+    display: result.money ? compactCurrency(row.value, currency.value) : `${row.value.toLocaleString(undefined, { maximumFractionDigits: 1 })}${one ? ` ${row.value === 1 ? one : many}` : ''}`,
+    to: row.linkDoctype ? { name: 'document-detail', params: { doctype: row.linkDoctype, name: row.key } } : undefined,
+  }));
+});
 const statusTotal = computed(() => dashboard.statusMix.value.reduce((sum, segment) => sum + segment.value, 0));
 const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-blue', green: 'tone-green', amber: 'tone-amber', rose: 'tone-rose', cyan: 'tone-cyan', slate: 'tone-slate' };
 </script>
@@ -103,6 +124,30 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
         </span>
         <span class="kpi-hint">{{ kpi.value === null ? 'not available to you' : kpi.hint }}<template v-if="kpiSpark(kpi.doctype)?.some(Boolean)"> · new per week</template></span>
       </RouterLink>
+    </section>
+
+    <!-- Headline trend + ranking -->
+    <section v-if="!ngo && dashConfig?.trend" class="dash-grid">
+      <article class="panel panel--main">
+        <header class="panel-head"><div><h2>{{ dashConfig.trend.title }}</h2><p>{{ dashConfig.trend.note }}</p></div></header>
+        <span v-if="dashboard.loading.value" class="skeleton" style="height: 290px; border-radius: 10px" />
+        <template v-else-if="trend && trendHasData">
+          <div class="trend-summary">
+            <div v-for="series in trend.series" :key="series.name" class="summary-stat">
+              <span><i :style="{ background: `var(${series.color})` }" />{{ series.name }}</span>
+              <strong class="tabular">{{ trendFormat(series.total) }}</strong>
+            </div>
+          </div>
+          <TrendChart :labels="trend.labels" :series="trend.series" type="line" :height="230" :format-value="trendFormat" :integer="!trend.money" hide-legend />
+        </template>
+        <ChartPlaceholder v-else kind="line" :height="290" :icon="TrendingUp" :title="`No ${dashConfig.trend.title.toLowerCase()} to chart yet`" :description="dashConfig.trend.note" />
+      </article>
+      <article v-if="dashConfig.ranking" class="panel">
+        <header class="panel-head"><div><h2>{{ dashConfig.ranking.title }}</h2><p>{{ dashConfig.ranking.note }}</p></div></header>
+        <div v-if="dashboard.loading.value" class="list-skeleton"><span v-for="index in 5" :key="index" class="skeleton" style="height: 40px; border-radius: 8px" /></div>
+        <RankBars v-else-if="rankingRows.length" :rows="rankingRows" :label="dashConfig.ranking.title" />
+        <ChartPlaceholder v-else kind="rows" :height="260" :icon="Trophy" :title="`Nothing to rank yet`" :description="dashConfig.ranking.note" />
+      </article>
     </section>
 
     <!-- Browse: every page in the module, grouped like the sidebar -->
@@ -200,6 +245,11 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
 .kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .kpi-label { overflow: hidden; color: var(--muted-foreground); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .kpi-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: currentColor; }
+.trend-summary { display: flex; flex-wrap: wrap; gap: 10px 32px; }
+.summary-stat { display: flex; flex-direction: column; gap: 4px; }
+.summary-stat span { display: inline-flex; align-items: center; gap: 7px; color: var(--subtle-foreground); font-size: 12px; font-weight: 500; }
+.summary-stat i { width: 10px; height: 10px; border-radius: 3px; }
+.summary-stat strong { color: var(--foreground); font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
 .kpi-body { display: flex; align-items: flex-end; gap: 12px; margin-top: 6px; }
 .kpi-spark { width: 40%; max-width: 110px; flex: none; }
 .kpi-value { min-width: 0; flex: 1; overflow: hidden; color: var(--foreground); font-family: var(--font-display); font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
