@@ -13,7 +13,7 @@ import type { ChartSegment, FrappeDocument, StatusTone } from '@/types/erp';
  * read only blanks its own tile.
  */
 
-export interface KpiValue { label: string; value: number | null; hint: string; tone: StatusTone; to: string }
+export interface KpiValue { label: string; value: number | null; hint: string; tone: StatusTone; to: string; doctype: string }
 export interface RecentRecord { doctype: string; name: string; title: string; status: { label: string; tone: StatusTone } | null; modified: string }
 
 const WEEKS = 8;
@@ -48,7 +48,7 @@ export function useModuleDashboard(module: Ref<VisibleModule | undefined>) {
 
     // KPI tiles
     const kpiTask = Promise.all((config?.kpis ?? []).map(async (kpi) => ({
-      label: kpi.label, hint: kpi.hint, tone: kpi.tone, to: getDocumentRouteForDocType(kpi.doctype),
+      label: kpi.label, hint: kpi.hint, tone: kpi.tone, to: getDocumentRouteForDocType(kpi.doctype), doctype: kpi.doctype,
       value: await safe(documentApi.count(kpi.doctype, typeof kpi.filters === 'function' ? kpi.filters() : kpi.filters)),
     })));
 
@@ -72,8 +72,9 @@ export function useModuleDashboard(module: Ref<VisibleModule | undefined>) {
         entry.value += 1;
         groups.set(status.label, entry);
       }
-      const toneColor: Record<StatusTone, string> = { green: '--chart-2', blue: '--chart-6', violet: '--chart-1', cyan: '--chart-3', amber: '--chart-4', rose: '--danger', slate: '--chart-5' };
-      return [...groups.entries()].sort((a, b) => b[1].value - a[1].value).map(([label, entry]) => ({ label, value: entry.value, color: toneColor[entry.tone] ?? '--chart-5', display: `${entry.value}` }));
+      // Status mixes use the reserved status colours (the badge tone), never series colours.
+      const toneColor: Record<StatusTone, string> = { green: '--success', blue: '--info', violet: '--chart-1', cyan: '--chart-3', amber: '--warning', rose: '--danger', slate: '--chart-neutral' };
+      return [...groups.entries()].sort((a, b) => b[1].value - a[1].value).map(([label, entry]) => ({ label, value: entry.value, color: toneColor[entry.tone] ?? '--chart-neutral', display: `${entry.value}` }));
     })();
 
     // Weekly creation activity

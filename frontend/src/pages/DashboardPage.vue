@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { ArrowRight, BarChart3, Boxes, CheckCircle2, FilePen, HandCoins, HeartHandshake, PiggyBank, CircleDollarSign, ClipboardList, Clock3, Headphones, PackageCheck, Plus, ReceiptText, RefreshCw, ShoppingBag, ShoppingCart, Truck, UsersRound } from 'lucide-vue-next';
+import { ArrowRight, BarChart3, Trophy, Boxes, CheckCircle2, FilePen, HandCoins, HeartHandshake, PiggyBank, CircleDollarSign, ClipboardList, Clock3, Headphones, PackageCheck, Plus, ReceiptText, RefreshCw, ShoppingBag, ShoppingCart, Truck, UsersRound } from 'lucide-vue-next';
 import { RouterLink } from 'vue-router';
 import MetricCard, { type Metric } from '@/components/data-display/MetricCard.vue';
 import PanelCard from '@/components/ui/PanelCard.vue';
 import BaseBadge from '@/components/ui/BaseBadge.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
-import EmptyState from '@/components/feedback/EmptyState.vue';
 import TrendChart from '@/components/charts/TrendChart.vue';
 import DonutGauge from '@/components/charts/DonutGauge.vue';
 import SegmentedBar from '@/components/charts/SegmentedBar.vue';
+import RankBars, { type RankRow } from '@/components/charts/RankBars.vue';
+import ChartPlaceholder from '@/components/charts/ChartPlaceholder.vue';
 import { useCurrentUser } from '@/composables/useCurrentUser';
 import { useSessionDefaults } from '@/composables/useSessionDefaults';
 import { useNavigation } from '@/composables/useNavigation';
@@ -65,7 +66,7 @@ async function load() {
   const countOf = (doctype: string, filters: unknown[][]) => safe(documentApi.count(doctype, filters));
 
   const [sales, buys, outstanding, openOrders, toReceive, overdue, lateDeliveries, pendingRequests, openIssues, items, customers] = await Promise.all([
-    safe(documentApi.list<FrappeDocument>('Sales Invoice', { fields: ['name', 'posting_date', 'base_grand_total'], filters: [['docstatus', '=', 1], ['posting_date', '>=', since]], limit: 2000 })),
+    safe(documentApi.list<FrappeDocument>('Sales Invoice', { fields: ['name', 'posting_date', 'base_grand_total', 'customer', 'customer_name'], filters: [['docstatus', '=', 1], ['posting_date', '>=', since]], limit: 2000 })),
     safe(documentApi.list<FrappeDocument>('Purchase Invoice', { fields: ['name', 'posting_date', 'base_grand_total'], filters: [['docstatus', '=', 1], ['posting_date', '>=', since]], limit: 2000 })),
     safe(documentApi.list<FrappeDocument>('Sales Invoice', { fields: ['name', 'due_date', 'outstanding_amount', 'base_grand_total'], filters: [['docstatus', '=', 1], ['outstanding_amount', '>', 0]], limit: 2000 })),
     countOf('Sales Order', [['docstatus', '=', 1], ['status', 'in', ['To Deliver and Bill', 'To Bill', 'To Deliver']]]),
@@ -115,7 +116,7 @@ function change(now: number, before: number): Pick<Metric, 'delta' | 'trend'> {
 
 const metrics = computed<Metric[]>(() => {
   const list: Metric[] = [];
-  if (invoices.value !== null || loading.value) list.push({ label: `Sales · last ${DAYS} days`, value: money(salesNow.value), ...change(salesNow.value, salesBefore.value), hint: 'vs previous period', tone: 'violet', icon: CircleDollarSign, to: getDocumentRouteForDocType('Sales Invoice'), loading: loading.value, emptyHint: salesNow.value ? undefined : 'Submit a sales invoice to start tracking' });
+  if (invoices.value !== null || loading.value) list.push({ label: `Sales · last ${DAYS} days`, value: money(salesNow.value), ...change(salesNow.value, salesBefore.value), hint: 'vs previous period', tone: 'violet', icon: CircleDollarSign, to: getDocumentRouteForDocType('Sales Invoice'), loading: loading.value, emptyHint: salesNow.value ? undefined : 'Submit a sales invoice to start tracking', spark: invoices.value ? daily(invoices.value) : undefined, sparkColor: '--chart-1' });
   if (receivables.value !== null || loading.value) list.push({ label: 'Receivables outstanding', value: money(outstandingTotal.value), hint: counts.value.overdue ? `${counts.value.overdue} overdue` : `${receivables.value?.length ?? 0} invoices`, tone: counts.value.overdue ? 'rose' : 'cyan', icon: Clock3, to: '/accounts/accounts-receivable', loading: loading.value, emptyHint: outstandingTotal.value ? undefined : 'Nothing owed to you right now' });
   if (counts.value.openOrders !== null || loading.value) list.push({ label: 'Sales orders to fulfil', value: String(counts.value.openOrders ?? 0), hint: counts.value.lateDeliveries ? `${counts.value.lateDeliveries} past delivery date` : 'none late', tone: 'green', icon: ShoppingCart, to: getDocumentRouteForDocType('Sales Order'), loading: loading.value, emptyHint: counts.value.openOrders ? undefined : 'Create a sales order to fulfil' });
   if (counts.value.toReceive !== null || loading.value) list.push({ label: 'Purchase orders open', value: String(counts.value.toReceive ?? 0), hint: 'to receive or bill', tone: 'blue', icon: ShoppingBag, to: getDocumentRouteForDocType('Purchase Order'), loading: loading.value, emptyHint: counts.value.toReceive ? undefined : 'Raise a purchase order when you buy' });
@@ -138,6 +139,7 @@ const chartSeries = computed(() => [
 ]);
 // A line needs at least two days with figures; fewer shows the compact empty state instead.
 const hasChartData = computed(() => chartLabels.value.filter((_, day) => chartSeries.value.some((series) => series.data[day])).length >= 2);
+const netNow = computed(() => salesNow.value - purchasesNow.value);
 const purchasesNow = computed(() => sum((purchases.value ?? []).filter((row) => String(row.posting_date) >= cutoff.value), 'base_grand_total'));
 
 // Collection rate: share of the last 30 days' invoicing already paid.
@@ -147,10 +149,11 @@ const collectionRate = computed(() => (salesNow.value ? Math.max(0, Math.round((
 
 const ageing = computed<ChartSegment[]>(() => {
   const buckets = [
-    { label: 'Not yet due', value: 0, color: '--chart-2' },
-    { label: '1–30 days', value: 0, color: '--chart-3' },
-    { label: '31–60 days', value: 0, color: '--chart-4' },
-    { label: 'Over 60 days', value: 0, color: '--chart-1' },
+    // Ordered by how late: a severity ramp, so "worse" always reads warmer.
+    { label: 'Not yet due', value: 0, color: '--severity-0' },
+    { label: '1–30 days', value: 0, color: '--severity-1' },
+    { label: '31–60 days', value: 0, color: '--severity-2' },
+    { label: 'Over 60 days', value: 0, color: '--severity-3' },
   ];
   const now = Date.now();
   for (const row of receivables.value ?? []) {
@@ -159,6 +162,23 @@ const ageing = computed<ChartSegment[]>(() => {
     buckets[bucket].value += Number(row.outstanding_amount) || 0;
   }
   return buckets.filter((bucket) => bucket.value > 0).map((bucket) => ({ ...bucket, display: compactMoney(bucket.value) }));
+});
+
+// Top customers by invoiced value over the last 30 days (from the invoices already loaded).
+const topCustomers = computed<RankRow[]>(() => {
+  const totals = new Map<string, { label: string; value: number; count: number }>();
+  for (const row of invoices.value ?? []) {
+    if (String(row.posting_date) < cutoff.value || !row.customer) continue;
+    const key = String(row.customer);
+    const entry = totals.get(key) ?? { label: String(row.customer_name || key), value: 0, count: 0 };
+    entry.value += Number(row.base_grand_total) || 0;
+    entry.count += 1;
+    totals.set(key, entry);
+  }
+  return [...totals.entries()].sort((a, b) => b[1].value - a[1].value).slice(0, 5).map(([key, entry]) => ({
+    key, label: entry.label, value: entry.value, display: compactMoney(entry.value), sub: `${entry.count} ${entry.count === 1 ? 'invoice' : 'invoices'}`,
+    to: { name: 'document-detail', params: { doctype: 'Customer', name: key } },
+  }));
 });
 
 interface Attention { key: string; title: string; detail: string; tone: 'rose' | 'amber' | 'blue' | 'slate'; icon: typeof Clock3; to: string | { name: string; params: Record<string, string> } }
@@ -265,52 +285,63 @@ const greeting = computed(() => {
 
     <section class="grid-2-1">
       <PanelCard title="Sales & purchases" :eyebrow="`Submitted invoices, last ${DAYS} days`" class="chart-panel">
-        <template v-if="loading"><span class="skeleton" style="height: 260px; border-radius: 10px" /></template>
+        <template v-if="loading"><span class="skeleton" style="height: 300px; border-radius: 10px" /></template>
         <template v-else-if="hasChartData">
           <div class="chart-summary">
-            <div><span>Sales</span><strong class="tabular">{{ money(salesNow) }}</strong></div>
-            <div><span>Purchases</span><strong class="tabular">{{ money(purchasesNow) }}</strong></div>
-            <div class="chart-legend"><span v-for="series in chartSeries" :key="series.name"><i :style="{ background: `var(${series.color})` }" />{{ series.name }}</span></div>
+            <div v-for="series in chartSeries" :key="series.name" class="summary-stat">
+              <span><i :style="{ background: `var(${series.color})` }" />{{ series.name }}</span>
+              <strong class="tabular">{{ money(series.name === 'Sales invoiced' ? salesNow : purchasesNow) }}</strong>
+            </div>
+            <div v-if="chartSeries.length > 1" class="summary-stat summary-stat--net">
+              <span>Net</span>
+              <strong :class="['tabular', netNow >= 0 ? 'is-up' : 'is-down']">{{ netNow >= 0 ? '+' : '−' }}{{ money(Math.abs(netNow)) }}</strong>
+            </div>
           </div>
-          <TrendChart :labels="chartLabels" :series="chartSeries" :format-value="compactMoney" />
+          <TrendChart :labels="chartLabels" :series="chartSeries" type="line" :height="260" :format-value="compactMoney" hide-legend />
         </template>
-        <EmptyState v-else compact class="empty-fixed" title="No submitted invoices yet" :description="`Sales and purchase invoices from the last ${DAYS} days will chart here.`" :icon="BarChart3">
-          <BaseButton variant="outline" size="sm" @click="$router.push({ name: 'document-create', params: { doctype: 'Sales Invoice' } })"><Plus :size="14" />New Sales Invoice</BaseButton>
-        </EmptyState>
+        <ChartPlaceholder v-else kind="line" :height="300" title="No submitted invoices yet" :description="`Sales and purchase invoices from the last ${DAYS} days will chart here.`" :icon="BarChart3">
+          <BaseButton variant="primary" size="sm" @click="$router.push({ name: 'document-create', params: { doctype: 'Sales Invoice' } })"><Plus :size="14" />New Sales Invoice</BaseButton>
+        </ChartPlaceholder>
       </PanelCard>
 
       <PanelCard title="Collection rate" :eyebrow="`Paid share of the last ${DAYS} days’ invoicing`">
-        <span v-if="loading" class="skeleton" style="height: 220px; border-radius: 10px" />
+        <span v-if="loading" class="skeleton" style="height: 300px; border-radius: 10px" />
         <div v-else-if="salesNow" class="gauge-body">
-          <DonutGauge :value="collectionRate" label="collected" color="--chart-2" />
+          <DonutGauge :value="collectionRate" label="collected" color="--chart-1" />
           <dl class="gauge-stats">
             <div><dt>Invoiced</dt><dd class="tabular">{{ compactMoney(salesNow) }}</dd></div>
             <div><dt>Still unpaid</dt><dd class="tabular">{{ compactMoney(unpaidRecent) }}</dd></div>
           </dl>
         </div>
-        <EmptyState v-else compact class="empty-fixed" title="Nothing invoiced yet" description="The collection rate appears once sales invoices are submitted." :icon="CircleDollarSign" />
+        <ChartPlaceholder v-else kind="donut" :height="300" title="Nothing invoiced yet" description="The share of invoicing already paid shows here." :icon="CircleDollarSign" />
       </PanelCard>
     </section>
 
-    <section class="grid-2-1">
-      <PanelCard title="Recent transactions" eyebrow="Latest changes across selling, buying and accounts">
-        <div v-if="loading" class="list-skeleton"><span v-for="index in 5" :key="index" class="skeleton" style="height: 44px; border-radius: 10px" /></div>
-        <template v-else-if="recentRows.length">
-          <RouterLink v-for="row in recentRows" :key="row.key" :to="{ name: 'document-detail', params: { doctype: row.doctype, name: row.name } }" class="list-row list-row--link" :style="{ '--c': `var(${row.color})` }">
-            <span class="row-icon"><component :is="row.icon" :size="16" /></span>
-            <span class="row-copy"><strong>{{ row.doctype }} {{ row.name }}</strong><small>{{ row.party || '—' }} · {{ row.when }}</small></span>
-            <span class="row-end"><strong v-if="row.amount" class="tabular">{{ row.amount }}</strong><BaseBadge v-if="row.status" :tone="row.status.tone" :label="row.status.label" /></span>
-          </RouterLink>
-        </template>
-        <EmptyState v-else compact title="No transactions yet" description="Quotations, orders, invoices and payments will appear here as your team works." :icon="ReceiptText" />
+    <section class="grid-1-1">
+      <PanelCard title="Top customers" :eyebrow="`By invoiced value, last ${DAYS} days`">
+        <div v-if="loading" class="list-skeleton"><span v-for="index in 5" :key="index" class="skeleton" style="height: 40px; border-radius: 10px" /></div>
+        <RankBars v-else-if="topCustomers.length" :rows="topCustomers" label="Top customers by invoiced value" />
+        <ChartPlaceholder v-else kind="rows" :height="240" title="No customer invoices yet" description="Your biggest customers this month will rank here." :icon="Trophy" />
       </PanelCard>
 
-      <PanelCard title="Receivables by age" :eyebrow="outstandingTotal ? `${money(outstandingTotal)} outstanding` : 'Submitted invoices with a balance'">
-        <span v-if="loading" class="skeleton" style="height: 180px; border-radius: 10px" />
-        <SegmentedBar v-else-if="ageing.length" :segments="ageing" label="Outstanding receivables split by days past due" />
-        <EmptyState v-else compact title="Nothing outstanding" description="Every submitted sales invoice is fully paid." :icon="PackageCheck" />
+      <PanelCard title="Receivables by age" eyebrow="Outstanding balance by days past due">
+        <span v-if="loading" class="skeleton" style="height: 240px; border-radius: 10px" />
+        <SegmentedBar v-else-if="ageing.length" :segments="ageing" :heading="`${money(outstandingTotal)} outstanding`" label="Outstanding receivables split by days past due" />
+        <ChartPlaceholder v-else kind="bar" :height="240" title="Nothing outstanding" description="Every submitted sales invoice is fully paid." :icon="CheckCircle2" />
       </PanelCard>
     </section>
+
+    <PanelCard title="Recent transactions" eyebrow="Latest changes across selling, buying and accounts">
+      <div v-if="loading" class="list-skeleton"><span v-for="index in 5" :key="index" class="skeleton" style="height: 44px; border-radius: 10px" /></div>
+      <template v-else-if="recentRows.length">
+        <RouterLink v-for="row in recentRows" :key="row.key" :to="{ name: 'document-detail', params: { doctype: row.doctype, name: row.name } }" class="list-row list-row--link" :style="{ '--c': `var(${row.color})` }">
+          <span class="row-icon"><component :is="row.icon" :size="16" /></span>
+          <span class="row-copy"><strong>{{ row.doctype }} {{ row.name }}</strong><small>{{ row.party || '—' }} · {{ row.when }}</small></span>
+          <span class="row-end"><strong v-if="row.amount" class="tabular">{{ row.amount }}</strong><BaseBadge v-if="row.status" :tone="row.status.tone" :label="row.status.label" /></span>
+        </RouterLink>
+      </template>
+      <ChartPlaceholder v-else kind="rows" :height="220" title="No transactions yet" description="Quotations, orders, invoices and payments will appear here as your team works." :icon="ReceiptText" />
+    </PanelCard>
   </div>
 </template>
 
@@ -323,13 +354,15 @@ const greeting = computed(() => {
 .grid-2-1 { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 14px; }
 .grid-1-1 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 
-.chart-summary { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 28px; margin-bottom: 10px; }
-.chart-summary > div:not(.chart-legend) { display: flex; flex-direction: column; gap: 2px; }
-.chart-summary span { color: var(--muted-foreground); font-size: 12px; }
-.chart-summary strong { color: var(--foreground); font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
-.chart-legend { display: flex; gap: 14px; margin-left: auto; color: var(--muted-foreground); font-size: 12px; }
-.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.chart-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.chart-summary { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 32px; margin-bottom: 14px; }
+.summary-stat { display: flex; flex-direction: column; gap: 4px; }
+.summary-stat span { display: inline-flex; align-items: center; gap: 7px; color: var(--subtle-foreground); font-size: 12px; font-weight: 500; }
+.summary-stat i { width: 10px; height: 10px; border-radius: 3px; }
+.summary-stat strong { color: var(--foreground); font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.summary-stat--net { margin-left: auto; padding-left: 20px; border-left: 1px solid var(--border); }
+.summary-stat--net strong { font-size: 18px; }
+.summary-stat .is-up { color: var(--success-soft-foreground); }
+.summary-stat .is-down { color: var(--danger-soft-foreground); }
 
 .gauge-body { display: flex; flex-direction: column; align-items: center; gap: 18px; padding-top: 4px; }
 .gauge-stats { display: grid; grid-template-columns: 1fr 1fr; width: 100%; margin: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-tint); }
@@ -350,7 +383,6 @@ const greeting = computed(() => {
 .list-row--link:hover .row-open svg { transform: translateX(2px); }
 .caught-up { display: flex; align-items: center; gap: 8px; color: var(--muted-foreground); font-size: 13px; }
 .caught-up svg { flex: none; color: var(--secondary); }
-.empty-fixed { height: 180px; }
 .ngo-strip { display: flex; flex-direction: column; gap: 10px; }
 .strip-head { display: flex; align-items: baseline; gap: 10px; }
 .strip-head h2 { color: var(--foreground); font-size: 14px; font-weight: 600; }

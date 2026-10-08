@@ -14,6 +14,8 @@ import BaseBadge from '@/components/ui/BaseBadge.vue';
 import TrendChart from '@/components/charts/TrendChart.vue';
 import SegmentedBar from '@/components/charts/SegmentedBar.vue';
 import BudgetBars from '@/components/charts/BudgetBars.vue';
+import Sparkline from '@/components/charts/Sparkline.vue';
+import ChartPlaceholder from '@/components/charts/ChartPlaceholder.vue';
 import { ngoOverview, lakh } from '@/ngo/overview';
 import { monogram, monogramTone } from '@/lib/display';
 import { relativeTime } from '@/lib/doctype';
@@ -61,6 +63,9 @@ function browseDescription(item: BrowseItem) {
   if (item.doctype && item.doctype !== item.label) return item.doctype;
   return item.doctype ? 'Records' : 'Page';
 }
+/** Weekly creation counts for a KPI's DocType, when the activity chart already loaded them. */
+const kpiSpark = (doctype: string) => dashboard.activitySeries.value.find((series) => series.name === doctype)?.data;
+const statusTotal = computed(() => dashboard.statusMix.value.reduce((sum, segment) => sum + segment.value, 0));
 const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-blue', green: 'tone-green', amber: 'tone-amber', rose: 'tone-rose', cyan: 'tone-cyan', slate: 'tone-slate' };
 </script>
 
@@ -92,8 +97,11 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
       <template v-if="dashboard.loading.value && !dashboard.kpis.value.length"><span v-for="index in 4" :key="index" class="skeleton kpi-skeleton" /></template>
       <RouterLink v-for="(kpi, index) in dashboard.kpis.value" :key="kpi.label" :to="kpi.to" :class="['kpi kpi--link', { 'kpi--lead': index === 0 }]">
         <span class="kpi-top"><span class="kpi-label">{{ kpi.label }}</span><span :class="['kpi-dot', toneIcon[kpi.tone]]" /></span>
-        <strong class="kpi-value tabular">{{ kpi.value === null ? '—' : kpi.value.toLocaleString() }}</strong>
-        <span class="kpi-hint">{{ kpi.value === null ? 'not available to you' : kpi.hint }}</span>
+        <span class="kpi-body">
+          <strong class="kpi-value tabular">{{ kpi.value === null ? '—' : kpi.value.toLocaleString() }}</strong>
+          <Sparkline v-if="kpiSpark(kpi.doctype)?.some(Boolean)" :data="kpiSpark(kpi.doctype)!" :color="index === 0 ? '--primary-foreground' : '--chart-1'" :height="30" class="kpi-spark" />
+        </span>
+        <span class="kpi-hint">{{ kpi.value === null ? 'not available to you' : kpi.hint }}<template v-if="kpiSpark(kpi.doctype)?.some(Boolean)"> · new per week</template></span>
       </RouterLink>
     </section>
 
@@ -139,14 +147,14 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
             <div v-if="hasActivity" class="legend"><span v-for="series in dashboard.activitySeries.value" :key="series.name"><i :style="{ background: `var(${series.color})` }" />{{ series.name }}</span></div>
           </header>
           <span v-if="dashboard.loading.value" class="skeleton" style="height: 240px; border-radius: 10px" />
-          <TrendChart v-else-if="hasActivity" :labels="dashboard.activityLabels.value" :series="dashboard.activitySeries.value" :height="240" integer />
-          <EmptyState v-else compact :icon="BarChart3" :title="hasActivityAtAll ? 'Not enough activity to chart yet' : 'No new documents in 8 weeks'" :description="`Activity appears here as your team creates ${module.label.toLowerCase()} documents.`" />
+          <TrendChart v-else-if="hasActivity" :labels="dashboard.activityLabels.value" :series="dashboard.activitySeries.value" type="line" :height="240" integer hide-legend />
+          <ChartPlaceholder v-else kind="line" :height="240" :icon="BarChart3" :title="hasActivityAtAll ? 'Not enough activity to chart yet' : 'No new documents in 8 weeks'" :description="`Activity appears here as your team creates ${module.label.toLowerCase()} documents.`" />
         </article>
         <article class="panel">
           <header class="panel-head"><div><h2>Status</h2><p>{{ dashboard.statusDoctype.value || module.label }} by current status</p></div></header>
           <span v-if="dashboard.loading.value" class="skeleton" style="height: 180px; border-radius: 10px" />
-          <SegmentedBar v-else-if="dashboard.statusMix.value.length" :segments="dashboard.statusMix.value" :label="`${dashboard.statusDoctype.value} by status`" />
-          <EmptyState v-else compact :icon="Layers3" :title="`No ${dashboard.statusDoctype.value || 'records'} yet`" description="The status mix appears once records exist." />
+          <SegmentedBar v-else-if="dashboard.statusMix.value.length" :segments="dashboard.statusMix.value" :heading="`${statusTotal.toLocaleString()} ${dashboard.statusDoctype.value}`" :label="`${dashboard.statusDoctype.value} by status`" />
+          <ChartPlaceholder v-else kind="bar" :height="240" :icon="Layers3" :title="`No ${dashboard.statusDoctype.value || 'records'} yet`" description="The status mix appears once records exist." />
         </article>
       </template>
     </section>
@@ -167,7 +175,7 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
             </RouterLink>
           </li>
         </ul>
-        <EmptyState v-else compact :icon="Clock3" title="Nothing here yet" :description="`Records you create in ${module.label} will appear here.`" />
+        <ChartPlaceholder v-else kind="rows" :height="220" :icon="Clock3" title="Nothing here yet" :description="`Records you create in ${module.label} will appear here.`" />
       </article>
 
     </section>
@@ -192,7 +200,9 @@ const toneIcon: Record<string, string> = { violet: 'tone-violet', blue: 'tone-bl
 .kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .kpi-label { overflow: hidden; color: var(--muted-foreground); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .kpi-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: currentColor; }
-.kpi-value { overflow: hidden; margin-top: 6px; color: var(--foreground); font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+.kpi-body { display: flex; align-items: flex-end; gap: 12px; margin-top: 6px; }
+.kpi-spark { width: 40%; max-width: 110px; flex: none; }
+.kpi-value { min-width: 0; flex: 1; overflow: hidden; color: var(--foreground); font-family: var(--font-display); font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
 .kpi-hint { overflow: hidden; color: var(--subtle-foreground); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .kpi--lead { border-color: var(--primary); background: var(--primary); box-shadow: var(--shadow-md); }
 .kpi--lead .kpi-label, .kpi--lead .kpi-hint { color: color-mix(in srgb, var(--primary-foreground) 80%, transparent); }

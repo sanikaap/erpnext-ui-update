@@ -22,9 +22,10 @@ export type OverviewPanel =
 
 export interface NgoOverview { eyebrow: string; kpis: OverviewKpi[]; panels: OverviewPanel[] }
 
-const chart = (index: number) => `--chart-${(index % 6) + 1}`;
-const projectBudget = (): BudgetRow[] => PROJECTS.map((project, index) => ({ label: project.name, allocated: project.budget, used: project.used, color: chart(index), to: record('NGO Project', project.id) }));
-const fundsTrend = (): OverviewPanel => ({ kind: 'trend', title: 'Funds received and utilised', note: `${ORG.fy} to date`, labels: MONTHS, series: [{ name: 'Funds received', data: RECEIPT_TREND, color: '--chart-6' }, { name: 'Funds utilised', data: SPEND_TREND, color: '--chart-4' }] });
+// Categorical slots in fixed order; never cycled: anything past six reads as neutral "other".
+const chart = (index: number) => (index < 6 ? `--chart-${index + 1}` : '--chart-neutral');
+const projectBudget = (): BudgetRow[] => PROJECTS.map((project, index) => ({ label: project.name, allocated: project.budget, used: project.used, to: record('NGO Project', project.id) }));
+const fundsTrend = (): OverviewPanel => ({ kind: 'trend', title: 'Funds received and utilised', note: `${ORG.fy} to date`, labels: MONTHS, series: [{ name: 'Funds received', data: RECEIPT_TREND, color: '--chart-1' }, { name: 'Funds utilised', data: SPEND_TREND, color: '--chart-2' }] });
 const outcomesPanel = (title = 'Outcomes against target'): OverviewPanel => ({
   kind: 'progress', title, note: 'Current value versus programme target', wide: true,
   rows: PROGRAMS.flatMap((programme) => programme.outcomes.map((outcome, index) => ({ label: outcome.n, detail: programme.name, value: outcome.c, target: outcome.t, unit: outcome.u, to: record('Impact Outcome', `${programme.id}-O${index + 1}`) }))).slice(0, 10),
@@ -58,7 +59,7 @@ export function ngoOverview(moduleId: string): NgoOverview | null {
           { label: 'Sessions held', value: String(sessions), hint: 'in recorded cycles', tone: 'blue' },
         ],
         panels: [
-          { kind: 'budget', title: 'Programme budget versus actual', note: 'Grey is allocated, colour is utilised', rows: PROGRAMS.map((programme, index) => ({ label: programme.name, allocated: programme.budget, used: programme.used, color: chart(index), to: record('Programme', programme.id) })), wide: true },
+          { kind: 'budget', title: 'Programme budget versus actual', note: 'Grey is allocated, colour is utilised', rows: PROGRAMS.map((programme, index) => ({ label: programme.name, allocated: programme.budget, used: programme.used, to: record('Programme', programme.id) })), wide: true },
           outcomesPanel(),
         ],
       };
@@ -75,7 +76,7 @@ export function ngoOverview(moduleId: string): NgoOverview | null {
           { label: 'Needs support', value: String(flags.filter((flag) => flag !== 'Green').length), hint: 'Amber or Red flag', tone: 'amber' },
         ],
         panels: [
-          { kind: 'segments', title: 'Risk flags', note: 'Latest milestone round', segments: [{ label: 'Green', value: flags.filter((flag) => flag === 'Green').length, color: '--chart-2' }, { label: 'Amber', value: flags.filter((flag) => flag === 'Amber').length, color: '--chart-4' }, { label: 'Red', value: flags.filter((flag) => flag === 'Red').length, color: '--chart-1' }].filter((segment) => segment.value).map((segment) => ({ ...segment, display: `${segment.value} children` })) },
+          { kind: 'segments', title: 'Risk flags', note: 'Latest milestone round', segments: [{ label: 'Green', value: flags.filter((flag) => flag === 'Green').length, color: '--success' }, { label: 'Amber', value: flags.filter((flag) => flag === 'Amber').length, color: '--warning' }, { label: 'Red', value: flags.filter((flag) => flag === 'Red').length, color: '--danger' }].filter((segment) => segment.value).map((segment) => ({ ...segment, display: `${segment.value} children` })) },
           { kind: 'progress', title: 'Latest composite score', note: 'Lowest first — who needs attention', wide: false, rows: [...CHILDREN].map((child) => ({ child, score: composite(child.rounds[child.rounds.length - 1].s) })).sort((a, b) => a.score - b.score).slice(0, 6).map(({ child, score }) => ({ label: child.name, detail: byId(CENTRES, child.centre)?.name ?? child.centre, value: score, target: 100, unit: '%', to: record('Beneficiary', child.id) })) },
         ],
       };
@@ -101,7 +102,7 @@ export function ngoOverview(moduleId: string): NgoOverview | null {
           { label: '80G receipts', value: String(RECEIPTS.length), hint: 'issued this year', tone: 'violet' },
         ],
         panels: [
-          { kind: 'budget', title: 'Received versus utilised by donor', note: 'Grey is received, colour is the donor’s share utilised', rows: DONORS.map((donor, index) => ({ label: donor.name, allocated: donor.received, used: Math.round(donorUtilised(donor)), color: chart(index), to: record('Donor', donor.id) })), wide: true },
+          { kind: 'budget', title: 'Received versus utilised by donor', note: 'Grey is received, colour is the donor’s share utilised', rows: DONORS.map((donor, index) => ({ label: donor.name, allocated: donor.received, used: Math.round(donorUtilised(donor)), to: record('Donor', donor.id) })), wide: true },
           fundsTrend(),
         ],
       };
@@ -116,8 +117,8 @@ export function ngoOverview(moduleId: string): NgoOverview | null {
           { label: 'Budget left', value: lakh(TOTALS.budget - TOTALS.used), hint: `${100 - pct(TOTALS.used, TOTALS.budget)}% unspent`, tone: 'green' },
         ],
         panels: [
-          { kind: 'budget', title: 'Spend by budget head', note: 'Grey is allocated, colour is utilised', rows: byHead.map((entry) => ({ label: entry.head.name, allocated: entry.allocated, used: entry.used, color: chart(entry.index), to: record('NGO Budget Head', entry.head.id) })), wide: true },
-          { kind: 'trend', title: 'Monthly spend', note: ORG.fy, labels: MONTHS, series: [{ name: 'Utilised', data: SPEND_TREND, color: '--chart-4' }] },
+          { kind: 'budget', title: 'Spend by budget head', note: 'Grey is allocated, colour is utilised', rows: byHead.map((entry) => ({ label: entry.head.name, allocated: entry.allocated, used: entry.used, to: record('NGO Budget Head', entry.head.id) })), wide: true },
+          { kind: 'trend', title: 'Monthly spend', note: ORG.fy, labels: MONTHS, series: [{ name: 'Utilised', data: SPEND_TREND, color: '--chart-2' }] },
         ],
       };
     }

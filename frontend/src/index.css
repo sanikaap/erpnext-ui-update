@@ -88,14 +88,25 @@
   --info-soft: #e2f1f7;
   --info-soft-foreground: #1f6684;
 
-  /* Charts: teal family first, warm accents last */
-  --chart-1: #0e6e70;
-  --chart-2: #19a7ae;
-  --chart-3: #16845a;
-  --chart-4: #c98918;
-  --chart-5: #9cc9c6;
-  --chart-6: #3284a8;
-  --chart-track: #e6eeec;
+  /* Charts. Categorical slots, in this fixed order (validated: lightness band, chroma,
+     colour-blind separation ≥ 8 ΔE, normal-vision ≥ 15 ΔE, ≥ 3:1 on the card surface).
+     Never cycle past 6: fold extra series into "Other". */
+  --chart-1: #009090; /* teal */
+  --chart-2: #e07a2e; /* orange */
+  --chart-3: #3d6fd1; /* blue */
+  --chart-4: #c2417f; /* magenta */
+  --chart-5: #6f9a22; /* olive */
+  --chart-6: #7650c4; /* violet */
+  /* Neutral series (e.g. "Other", draft) and the unfilled part of a gauge/bar. */
+  --chart-neutral: #a7b7b5;
+  --chart-track: #e8efed;
+  --chart-grid: #e8efed;
+  --chart-axis: #617374;
+  /* Severity ramp for ordered "how late / how bad" buckets (ageing, overdue). */
+  --severity-0: #009090;
+  --severity-1: #d9a13a;
+  --severity-2: #e07a2e;
+  --severity-3: #c94b43;
 
   /* Module accents (icons only) */
   --mod-crm: #c2416b;
@@ -258,13 +269,21 @@
   --info-soft: rgba(107, 184, 218, .14);
   --info-soft-foreground: #8fcae4;
 
-  --chart-1: #32b8b2;
-  --chart-2: #3cc3ca;
-  --chart-3: #4cc38a;
-  --chart-4: #e0ae4a;
-  --chart-5: #2c5f5d;
-  --chart-6: #6bb8da;
+  /* Same hues, stepped for the dark surface (validated against #162526). */
+  --chart-1: #1f9d99;
+  --chart-2: #d5732f;
+  --chart-3: #6b93e3;
+  --chart-4: #d9659a;
+  --chart-5: #78a532;
+  --chart-6: #9a7de0;
+  --chart-neutral: #5f7473;
   --chart-track: #213536;
+  --chart-grid: #233738;
+  --chart-axis: #91a5a4;
+  --severity-0: #1f9d99;
+  --severity-1: #d0a040;
+  --severity-2: #d5732f;
+  --severity-3: #e8857c;
 
   --mod-crm: #e88aa8;
   --mod-selling: #32b8b2;
