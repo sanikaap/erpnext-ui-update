@@ -81,6 +81,12 @@ function onNumberBlur() { numberDraft.value = null; }
 
 // Frappe datetimes are "YYYY-MM-DD HH:mm:ss"; datetime-local wants "YYYY-MM-DDTHH:mm".
 const datetimeValue = computed(() => stringValue.value ? stringValue.value.replace(' ', 'T').slice(0, 16) : '');
+/** Frappe sends times as "9:46:00" (or with microseconds); <input type="time"> needs "09:46:00". */
+const timeValue = computed(() => {
+  const [hours = '', minutes = '00', seconds = '00'] = stringValue.value.split('.')[0].split(':');
+  return hours ? [hours, minutes, seconds].map((part) => part.padStart(2, '0')).join(':') : '';
+});
+
 function onDatetime(value: string) {
   emit('update:modelValue', value ? `${value.replace('T', ' ')}:00`.slice(0, 19) : '');
 }
@@ -205,7 +211,7 @@ function onJsonInput(value: string) {
 
   <input v-else-if="type === 'Date'" :id="inputId" type="date" :class="['control', { 'control--invalid': invalid, 'control--compact': compact }]" :value="stringValue.slice(0, 10)" @input="update(($event.target as HTMLInputElement).value)" />
   <input v-else-if="type === 'Datetime'" :id="inputId" type="datetime-local" :class="['control', { 'control--invalid': invalid, 'control--compact': compact }]" :value="datetimeValue" @input="onDatetime(($event.target as HTMLInputElement).value)" />
-  <input v-else-if="type === 'Time'" :id="inputId" type="time" step="1" :class="['control', { 'control--invalid': invalid, 'control--compact': compact }]" :value="stringValue.slice(0, 8)" @input="update(($event.target as HTMLInputElement).value)" />
+  <input v-else-if="type === 'Time'" :id="inputId" type="time" step="1" :class="['control', { 'control--invalid': invalid, 'control--compact': compact }]" :value="timeValue" @input="update(($event.target as HTMLInputElement).value)" />
 
   <textarea
     v-else-if="MULTILINE.has(type)"
@@ -221,8 +227,8 @@ function onJsonInput(value: string) {
   </div>
 
   <div v-else-if="type === 'Color'" class="fr-color control">
-    <input type="color" :value="stringValue || '#0e6e70'" @input="update(($event.target as HTMLInputElement).value)" />
-    <input :id="inputId" :value="stringValue" placeholder="#0e6e70" @input="update(($event.target as HTMLInputElement).value)" />
+    <input type="color" :value="stringValue || '#087f80'" @input="update(($event.target as HTMLInputElement).value)" />
+    <input :id="inputId" :value="stringValue" placeholder="#087f80" @input="update(($event.target as HTMLInputElement).value)" />
   </div>
 
   <div v-else-if="type === 'Autocomplete'" class="fr-auto">
@@ -251,7 +257,7 @@ function onJsonInput(value: string) {
 .control--compact:hover { border-color: var(--border); }
 .control--compact:focus { background: var(--input-background); }
 
-.fr-readonly { display: flex; min-height: 36px; align-items: center; padding: 0 11px; overflow: hidden; color: var(--foreground); border: 1px dashed var(--border); border-radius: var(--radius-md); background: var(--readonly-background); font-size: 13px; overflow-wrap: anywhere; }
+.fr-readonly { display: flex; min-height: 38px; align-items: center; padding: 0 12px; overflow: hidden; color: var(--foreground); border: 1px solid transparent; border-radius: var(--radius-md); background: var(--readonly-background); font-size: 13px; overflow-wrap: anywhere; }
 .fr-readonly--compact { min-height: 30px; padding: 0 8px; border-color: transparent; background: transparent; }
 .fr-readonly--numeric { justify-content: flex-end; font-variant-numeric: tabular-nums; }
 .fr-readonly--compact.fr-readonly--numeric { justify-content: flex-end; }

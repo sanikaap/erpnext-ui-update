@@ -84,8 +84,6 @@ onBeforeUnmount(() => window.clearInterval(timer));
 </template>
 
 <style scoped>
-.icon-button { position: relative; display: grid; width: 36px; height: 36px; place-items: center; color: var(--muted-foreground); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); transition: background-color .15s, color .15s; }
-.icon-button:hover { color: var(--primary); background: var(--primary-softer); }
 .badge-count { position: absolute; top: -5px; right: -5px; display: grid; min-width: 17px; height: 17px; padding: 0 4px; place-items: center; color: var(--danger-foreground); border: 2px solid var(--surface); border-radius: 999px; background: var(--danger); font-size: 9.5px; font-weight: 700; }
 .notif-head { display: flex; align-items: center; justify-content: space-between; margin: -2px 0 8px; }
 .notif-head strong { color: var(--foreground); font-size: 13.5px; }

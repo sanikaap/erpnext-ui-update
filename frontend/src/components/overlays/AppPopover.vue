@@ -45,7 +45,7 @@ void props;
 
 <style scoped>
 .popover-root { position: relative; display: inline-flex; }
-.popover { position: absolute; z-index: 30; top: calc(100% + 6px); max-width: calc(100vw - 32px); padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-elevated); box-shadow: var(--shadow-lg); }
+.popover { position: absolute; z-index: 30; top: calc(100% + 6px); max-width: calc(100vw - 32px); padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-elevated); box-shadow: var(--shadow-lg); }
 .popover--start { left: 0; }
 .popover--end { right: 0; }
 </style>

@@ -5,6 +5,10 @@ import { RouterLink } from 'vue-router';
 import Sparkline from '@/components/charts/Sparkline.vue';
 import type { StatusTone } from '@/types/erp';
 
+/**
+ * The KPI tile used on the dashboard and every module overview. White card; the
+ * tone colours only the icon (or dot), the sparkline and the hover border.
+ */
 export interface Metric {
   label: string;
   value: string;
@@ -15,14 +19,15 @@ export interface Metric {
   /** Whether "up" is good for this metric (sales) or bad (overdue). */
   upIsGood?: boolean;
   tone: StatusTone;
-  icon: Component;
+  /** Optional: without one, a small tone dot marks the tile. */
+  icon?: Component;
   to?: string;
   loading?: boolean;
   /** Next step shown instead of the hint when the value is empty (e.g. zero); also mutes the value. */
   emptyHint?: string;
   /** Recent values (oldest first) drawn as a small trend line beside the figure. */
   spark?: number[];
-  /** Token name for the sparkline color (default --chart-1). */
+  /** Token name for the sparkline color (default: the tile's tone). */
   sparkColor?: string;
 }
 
@@ -30,42 +35,46 @@ defineProps<{ metric: Metric }>();
 </script>
 
 <template>
-  <component :is="metric.to ? RouterLink : 'article'" :to="metric.to" :class="['metric-card', `metric-card--${metric.tone}`, `kpi-tone-${metric.tone}`, { 'metric-card--link': metric.to }]" data-testid="card-metric">
+  <component :is="metric.to ? RouterLink : 'article'" :to="metric.to" :class="['metric-card', `kpi-tone-${metric.tone}`, { 'metric-card--link': metric.to }]" data-testid="card-metric">
     <div class="metric-top">
-      <span class="metric-icon"><component :is="metric.icon" :size="17" /></span>
-      <span class="metric-label">{{ metric.label }}</span>
+      <span v-if="metric.icon" class="metric-icon"><component :is="metric.icon" :size="18" :stroke-width="2" /></span>
+      <span class="metric-label" :title="metric.label">{{ metric.label }}</span>
+      <span v-if="!metric.icon" class="metric-dot" aria-hidden="true" />
     </div>
-    <div class="metric-body">
-      <div :class="['metric-value tabular', { 'metric-value--empty': metric.emptyHint && !metric.loading }]"><span v-if="metric.loading" class="skeleton" style="width: 60%; height: 26px" /><template v-else>{{ metric.value }}</template></div>
-      <Sparkline v-if="metric.spark && !metric.loading && metric.spark.some(Boolean)" :data="metric.spark" :color="metric.sparkColor || '--tone'" :height="34" class="metric-spark" />
-    </div>
-    <div class="metric-footer">
-      <span v-if="metric.emptyHint && !metric.loading" class="metric-next">{{ metric.emptyHint }}</span>
-      <template v-else>
-      <span v-if="metric.delta && !metric.loading" :class="['trend-pill', metric.trend === 'flat' || !metric.trend ? 'trend-pill--flat' : (metric.trend === 'up') === (metric.upIsGood ?? true) ? 'trend-pill--good' : 'trend-pill--bad']">
-        <ArrowUpRight v-if="metric.trend === 'up'" :size="12" /><ArrowDownRight v-else-if="metric.trend === 'down'" :size="12" /><Minus v-else :size="12" />{{ metric.delta }}
-      </span>
-      <span v-if="metric.hint">{{ metric.hint }}</span>
-      </template>
+    <div :class="['metric-value tabular', { 'metric-value--empty': metric.emptyHint && !metric.loading, 'metric-value--text': metric.value.length > 10 }]" :title="metric.value"><span v-if="metric.loading" class="skeleton" style="width: 60%; height: 28px" /><template v-else>{{ metric.value }}</template></div>
+    <div class="metric-foot">
+      <div class="metric-footer">
+        <span v-if="metric.emptyHint && !metric.loading" class="metric-next">{{ metric.emptyHint }}</span>
+        <template v-else-if="!metric.loading">
+          <span v-if="metric.delta" :class="['trend', metric.trend === 'flat' || !metric.trend ? 'trend--flat' : (metric.trend === 'up') === (metric.upIsGood ?? true) ? 'trend--good' : 'trend--bad']">
+            <ArrowUpRight v-if="metric.trend === 'up'" :size="13" /><ArrowDownRight v-else-if="metric.trend === 'down'" :size="13" /><Minus v-else :size="13" />{{ metric.delta }}
+          </span>
+          <span v-if="metric.hint" class="metric-hint">{{ metric.hint }}</span>
+        </template>
+      </div>
+      <Sparkline v-if="metric.spark && !metric.loading && metric.spark.filter(Boolean).length >= 3" :data="metric.spark" :color="metric.sparkColor || '--tone'" :height="40" class="metric-spark" />
     </div>
   </component>
 </template>
 
 <style scoped>
-.metric-card { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: var(--space-4) var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-xl); background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--tone, var(--primary)) 11%, transparent), transparent 60%), var(--surface); box-shadow: var(--shadow-md); transition: border-color var(--dur-fast) var(--ease); }
+.metric-card { position: relative; display: flex; min-width: 0; flex-direction: column; padding: 18px 18px 16px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-md); transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-med) var(--ease), transform var(--dur-med) var(--ease); }
 .metric-card--link:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
-.metric-card--link:hover { border-color: color-mix(in srgb, var(--tone) 45%, var(--border)); }
-.metric-top { display: flex; align-items: center; gap: 10px; }
-.metric-icon { display: grid; width: 34px; height: 34px; flex: none; place-items: center; color: var(--tone); border-radius: 10px; background: color-mix(in srgb, var(--tone) 14%, transparent); }
-.metric-label { color: var(--muted-foreground); font-size: 12.5px; font-weight: 500; }
-.metric-body { display: flex; align-items: flex-end; gap: 12px; margin: 14px 0 8px; }
-.metric-spark { width: 42%; max-width: 120px; flex: none; }
-.metric-value { min-width: 0; flex: 1; min-height: 30px; margin: 0; color: var(--foreground); font-family: var(--font-display); font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.metric-card--link:hover { border-color: color-mix(in srgb, var(--tone) 40%, var(--border)); box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+.metric-top { display: flex; min-width: 0; align-items: center; gap: 12px; }
+.metric-icon { display: grid; width: 40px; height: 40px; flex: none; place-items: center; color: var(--tone); border-radius: 50%; background: color-mix(in srgb, var(--tone) 12%, transparent); }
+.metric-label { min-width: 0; flex: 1; overflow: hidden; color: var(--foreground); font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.metric-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 18%, transparent); }
+.metric-value { min-height: 34px; margin: 14px 0 10px; overflow: hidden; color: var(--foreground); font-family: var(--font-display); font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.metric-value--text { font-size: 20px; line-height: 1.6; }
 .metric-value--empty { color: var(--subtle-foreground); }
+.metric-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: auto; }
+.metric-footer { display: flex; min-width: 0; flex-direction: column; gap: 3px; min-height: 36px; color: var(--subtle-foreground); font-size: 12px; font-variant-numeric: tabular-nums; }
 .metric-next { color: var(--muted-foreground); }
-.metric-footer { font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 20px; color: var(--subtle-foreground); font-size: 12px; }
-.trend-pill { font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
-.trend-pill--good { color: var(--secondary-soft-foreground); background: var(--secondary-soft); }
-.trend-pill--bad { color: var(--danger); background: var(--danger-soft); }
-.trend-pill--flat { color: var(--muted-foreground); background: var(--muted); }
+.metric-hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.metric-spark { width: 44%; max-width: 104px; flex: none; }
+.trend { display: inline-flex; align-items: center; gap: 3px; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.trend--good { color: var(--success-soft-foreground); }
+.trend--bad { color: var(--danger-soft-foreground); }
+.trend--flat { color: var(--muted-foreground); }
 </style>

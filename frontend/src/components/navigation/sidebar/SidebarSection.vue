@@ -16,6 +16,6 @@ const emit = defineEmits<{ navigate: [] }>();
 
 <style scoped>
 .nav-section { display: flex; flex-direction: column; gap: 1px; }
-.nav-section + .nav-section { margin-top: 18px; }
-.nav-section-label { margin: 0 0 6px; user-select: none; padding: 0 10px; color: var(--nav-subtle); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.nav-section + .nav-section { margin-top: 20px; }
+.nav-section-label { margin: 0 0 6px; user-select: none; padding: 0 12px; color: var(--nav-subtle); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 </style>

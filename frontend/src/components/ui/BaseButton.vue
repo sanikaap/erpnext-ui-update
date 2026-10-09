@@ -22,6 +22,7 @@ withDefaults(defineProps<{
 .base-button:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
 .base-button:active:not(:disabled) { transform: translateY(1px); }
 .base-button:disabled { cursor: not-allowed; opacity: .5; box-shadow: none; filter: none; }
+.base-button[aria-busy='true'] { cursor: progress; }
 .base-button--xs { height: 28px; padding: 0 10px; font-size: 12px; }
 .base-button--sm { height: var(--control-height-sm); padding: 0 12px; font-size: var(--text-base); }
 .base-button--md { height: var(--control-height); padding: 0 16px; font-size: var(--text-base); }
@@ -39,6 +40,8 @@ withDefaults(defineProps<{
 /* Quiet: neutral secondary action (white surface, dark text, subtle border) */
 .base-button--quiet { color: var(--foreground); border-color: var(--input-border); background: var(--surface); box-shadow: var(--shadow-sm); }
 .base-button--quiet:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-2); }
+.base-button--quiet :deep(svg), .base-button--ghost :deep(svg) { color: var(--icon-foreground); transition: color var(--dur-fast) var(--ease); }
+.base-button--quiet:hover:not(:disabled) :deep(svg), .base-button--ghost:hover:not(:disabled) :deep(svg) { color: var(--primary); }
 .base-button--quiet:active:not(:disabled), .base-button--ghost:active:not(:disabled) { background: var(--border); }
 
 /* Outline: accent-tinted secondary action */

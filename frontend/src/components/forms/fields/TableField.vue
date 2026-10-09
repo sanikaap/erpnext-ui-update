@@ -126,16 +126,16 @@ const hasTotals = computed(() => Object.keys(totals.value).length > 0 && rows.va
 <template>
   <div :class="['grid-field', { 'grid-field--readonly': readOnly }]">
     <div class="grid-head">
-      <div class="grid-title"><Rows3 :size="14" /><span>{{ field.label }}</span><span class="grid-count tabular">{{ rows.length }}</span></div>
+      <div class="grid-title"><span class="grid-title-icon" aria-hidden="true"><Rows3 :size="15" /></span><span>{{ field.label }}</span><span class="grid-count tabular">{{ rows.length }} {{ rows.length === 1 ? 'row' : 'rows' }}</span></div>
       <div v-if="!readOnly" class="grid-actions">
-        <BaseButton v-if="selected.size" variant="danger" size="xs" @click="deleteSelected"><Trash2 :size="13" />Delete {{ selected.size }}</BaseButton>
-        <BaseButton variant="outline" size="xs" @click="addRow"><Plus :size="13" />Add row</BaseButton>
+        <BaseButton v-if="selected.size" variant="danger" size="sm" @click="deleteSelected"><Trash2 :size="13" />Delete {{ selected.size }}</BaseButton>
+        <BaseButton variant="primary" size="sm" @click="addRow"><Plus :size="14" />Add row</BaseButton>
       </div>
     </div>
 
     <div v-if="!columns.length" class="grid-empty">ERPNext returned no fields for {{ field.options }}.</div>
     <div v-else class="grid-scroll">
-      <table class="grid">
+      <table class="grid-table">
         <thead>
           <tr>
             <th v-if="!readOnly" class="grid-select"><input type="checkbox" :checked="allSelected" :aria-label="`Select all ${field.label} rows`" :disabled="!rows.length" @change="toggleAll" /></th>
@@ -230,18 +230,20 @@ const hasTotals = computed(() => Object.keys(totals.value).length > 0 && rows.va
 
 <style scoped>
 .grid-field { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
-.grid-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 6px 8px 6px 14px; border-bottom: 1px solid var(--border); background: var(--surface-tint); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
-.grid-title { display: flex; align-items: center; gap: 8px; color: var(--foreground); font-size: 13px; font-weight: 600; }
-.grid-title svg { color: var(--primary); }
-.grid-count { padding: 1px 7px; color: var(--primary-soft-foreground); border-radius: 999px; background: var(--primary-soft); font-size: 11px; font-weight: 600; }
+/* Inside a table-only form section the card already draws the frame. */
+:global(.form-section--table) .grid-field { border: 0; border-radius: 0; }
+.grid-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 12px; min-height: 60px; padding: 12px 16px 12px 20px; border-bottom: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.grid-title { display: flex; align-items: center; gap: 10px; color: var(--foreground); font-size: 15px; font-weight: 600; }
+.grid-title-icon { display: grid; width: 28px; height: 28px; flex: none; place-items: center; color: var(--primary); border-radius: 8px; background: var(--primary-softer); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 16%, transparent); }
+.grid-count { padding: 1px 8px; color: var(--muted-foreground); border-radius: 999px; background: var(--muted); font-size: 11.5px; font-weight: 500; }
 .grid-actions { display: flex; gap: 6px; }
 .grid-scroll { overflow-x: auto; }
-.grid { width: 100%; min-width: 640px; border-collapse: separate; border-spacing: 0; font-size: 13px; }
-.grid th { height: 34px; padding: 0 8px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); font-size: 11.5px; font-weight: 600; text-align: left; white-space: nowrap; }
-.grid td { height: 40px; padding: 2px 4px; color: var(--foreground); border-bottom: 1px solid var(--border); vertical-align: middle; }
-.grid tbody tr:last-child td { border-bottom: 0; }
-.grid tbody tr { transition: background-color .1s; }
-.grid tbody tr:hover { background: var(--primary-softer); }
+.grid-table { width: 100%; min-width: 640px; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.grid-table th { height: 38px; padding: 0 8px; color: var(--subtle-foreground); border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 11.5px; font-weight: 600; text-align: left; white-space: nowrap; }
+.grid-table td { height: 46px; padding: 3px 4px; color: var(--foreground); border-bottom: 1px solid var(--border); vertical-align: middle; }
+.grid-table tbody tr:last-child td { border-bottom: 0; }
+.grid-table tbody tr { transition: background-color .1s; }
+.grid-table tbody tr:hover { background: var(--primary-softer); }
 .grid-row--selected { background: var(--primary-soft) !important; }
 .grid-row--error .grid-idx { color: var(--danger); font-weight: 700; }
 .grid-cell--error { box-shadow: inset 0 -2px 0 var(--danger); }
@@ -256,14 +258,14 @@ const hasTotals = computed(() => Object.keys(totals.value).length > 0 && rows.va
 .grid-open-cell:hover { background: var(--muted); }
 .grid-row-actions { width: 1%; padding-right: 8px !important; text-align: right; white-space: nowrap; }
 .grid-icon { display: inline-grid; width: 26px; height: 26px; place-items: center; color: var(--subtle-foreground); border: 0; border-radius: 6px; background: none; opacity: .7; transition: opacity .1s, background-color .1s, color .1s; }
-.grid tbody tr:hover .grid-icon, .grid-icon:focus-visible { opacity: 1; }
+.grid-table tbody tr:hover .grid-icon, .grid-icon:focus-visible { opacity: 1; }
 .grid-icon:hover:not(:disabled) { color: var(--primary); background: var(--primary-soft); }
 .grid-icon--danger:hover:not(:disabled) { color: var(--danger); background: var(--danger-soft); }
 .grid-icon:disabled { opacity: .3; cursor: not-allowed; }
-.grid-none { height: 64px !important; color: var(--muted-foreground) !important; font-size: 12.5px; text-align: center; }
+.grid-none { height: 88px !important; color: var(--muted-foreground) !important; font-size: 13px; text-align: center; }
 .grid-inline-add { padding: 0; color: var(--primary); border: 0; background: none; font-weight: 500; }
 .grid-inline-add:hover { text-decoration: underline; }
 .grid-empty { padding: 16px; color: var(--muted-foreground); font-size: 12.5px; }
-.grid tfoot td { height: 36px; padding: 0 12px; border-top: 1px solid var(--border); background: var(--surface-tint); font-weight: 600; }
+.grid-table tfoot td { height: 44px; padding: 0 12px; border-top: 1px solid var(--border); background: var(--surface-2); font-weight: 600; }
 .grid-total { color: var(--foreground); }
 </style>

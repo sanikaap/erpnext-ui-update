@@ -16,10 +16,14 @@ import { useLayoutStore } from '@/stores/layout';
  * opens its Level 2 without changing the page, and "← Module" returns to Level 1
  * without touching browser history.
  *
- * Modes:
- *   expanded   Level 1 full width; with Level 2 open, Level 1 becomes an icon rail beside it
- *   collapsed  icon rail only; Level 2 opens as a floating panel next to the rail
- *   mobile     drawer that drills down from Level 1 into Level 2
+ * Modes (see stores/layout.ts):
+ *   open    Level 1 with labels, the selected module's Level 2 docked beside it
+ *           (Level 1 shows icons beside Level 2 on screens < 1280px)
+ *   closed  icon rail only; Level 2 opens as a floating panel next to the rail
+ *   mobile  drawer that drills down from Level 1 into Level 2
+ *
+ * One open/close toggle, always in the sidebar's top-right corner: in Level 2's
+ * header while it is docked, otherwise in Level 1's brand row.
  */
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
@@ -38,8 +42,9 @@ const openModule = computed(() => modules.value.find((module) => module.key === 
 
 /** Desktop collapsed mode: Level 2 floats instead of docking. */
 const floating = computed(() => layout.sidebarCollapsed && !isMobile.value);
-/** Level 1 shows as icons when collapsed, or when Level 2 is docked beside it. */
-const railMode = computed(() => !isMobile.value && (layout.sidebarCollapsed || Boolean(openModule.value)));
+/** Level 1 shows icons only (closed, or beside a docked Level 2 on narrower screens). */
+const railMode = computed(() => !isMobile.value && layout.levelOneCompact);
+const docked = computed(() => Boolean(openModule.value) && !floating.value && !isMobile.value);
 
 // Follow the page: entering a module's page opens its Level 2 (docked mode only;
 // a floating panel closes after you pick a page).
@@ -53,7 +58,8 @@ watch(() => route.fullPath, () => {
 watch(floating, (value) => { layout.openModule = value ? null : activeModule.value?.key ?? null; });
 
 function select(key: string) {
-  layout.openModule = layout.openModule === key && floating.value ? null : key;
+  // Choosing the open module again closes its menu.
+  layout.openModule = layout.openModule === key ? null : key;
 }
 
 function back() {
@@ -114,7 +120,7 @@ function onDrawerKeydown(event: KeyboardEvent) {
   <aside
     id="app-sidebar"
     ref="aside"
-    :class="['sidebar', { 'sidebar-open': open, 'sidebar--rail': railMode, 'sidebar--docked': openModule && !floating && !isMobile }]"
+    :class="['sidebar', { 'sidebar-open': open, 'sidebar--rail': railMode, 'sidebar--docked': docked }]"
     aria-label="Sidebar"
     :role="drawerOpen ? 'dialog' : undefined"
     :aria-modal="drawerOpen || undefined"
@@ -129,7 +135,7 @@ function onDrawerKeydown(event: KeyboardEvent) {
         :active-key="activeModule?.key"
         :open-key="layout.openModule"
         :collapsed="layout.sidebarCollapsed"
-        :show-collapse-toggle="!isMobile"
+        :show-toggle="!isMobile && !docked"
         @select="select"
         @navigate="navigated"
         @toggle-collapse="layout.toggleSidebar()"
@@ -138,7 +144,7 @@ function onDrawerKeydown(event: KeyboardEvent) {
 
     <Transition :name="floating ? 'float' : 'slide'">
       <div v-if="openModule" :key="openModule.key" :class="['sidebar-level sidebar-level--two', { floating }]">
-        <SidebarLevelTwo :module="openModule" :floating="floating" @back="back" @navigate="navigated" />
+        <SidebarLevelTwo :module="openModule" :floating="floating" :show-toggle="docked" @back="back" @navigate="navigated" @toggle-collapse="layout.toggleSidebar()" />
       </div>
     </Transition>
     <div v-if="floating && openModule" class="float-scrim" aria-hidden="true" @click="back" />
@@ -147,30 +153,32 @@ function onDrawerKeydown(event: KeyboardEvent) {
 
 <style scoped>
 .sidebar {
-  --sidebar-rail-width: 68px;
+  --l1-width: 232px;
+  --rail-width: 68px;
+  --l2-width: 240px;
+  --l1-current: var(--l1-width);
   position: fixed; z-index: 50; inset: 0 auto 0 0;
-  display: flex; width: 248px;
+  display: flex; width: var(--l1-current);
   color: var(--nav-fg); background: var(--nav-bg-1);
   transition: width .22s var(--ease), transform .22s var(--ease);
 }
-.sidebar-level--one { position: relative; z-index: 3; width: 100%; flex: none; transition: width .22s var(--ease); }
-.sidebar--rail .sidebar-level--one { width: var(--sidebar-rail-width); }
-.sidebar--rail { width: var(--sidebar-rail-width); }
-.sidebar--docked { width: calc(var(--sidebar-rail-width) + 236px); }
-.sidebar-level--two { position: relative; z-index: 2; width: 236px; flex: none; }
-.sidebar-level--two.floating { position: absolute; top: 0; bottom: 0; left: var(--sidebar-rail-width); }
-.float-scrim { position: fixed; z-index: 1; inset: 0 0 0 calc(var(--sidebar-rail-width) + 236px); }
+.sidebar--rail { --l1-current: var(--rail-width); }
+.sidebar--docked { width: calc(var(--l1-current) + var(--l2-width)); }
+.sidebar-level--one { position: relative; z-index: 3; width: var(--l1-current); flex: none; transition: width .22s var(--ease); }
+.sidebar-level--two { position: relative; z-index: 2; width: var(--l2-width); flex: none; }
+.sidebar-level--two.floating { position: absolute; top: 0; bottom: 0; left: var(--rail-width); }
+.float-scrim { position: fixed; z-index: 1; inset: 0 0 0 calc(var(--rail-width) + var(--l2-width)); }
 
 .slide-enter-active, .slide-leave-active { transition: opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease); }
 .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateX(-12px); }
-.slide-leave-active { pointer-events: none; position: absolute; top: 0; bottom: 0; left: var(--sidebar-rail-width); }
+.slide-leave-active { pointer-events: none; position: absolute; top: 0; bottom: 0; left: var(--l1-current); }
 .float-enter-active, .float-leave-active { transition: opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease); }
 .float-enter-from, .float-leave-to { opacity: 0; transform: translateX(-10px); }
 
 @media (max-width: 900px) {
   .sidebar, .sidebar--rail, .sidebar--docked { width: 288px; max-width: 86vw; overflow: hidden; transform: translateX(-101%); }
   .sidebar.sidebar-open { transform: none; box-shadow: var(--shadow-lg); }
-  .sidebar-level--one, .sidebar--rail .sidebar-level--one { width: 100%; }
+  .sidebar-level--one { width: 100%; }
   /* Mobile drill-down: Level 2 slides over Level 1 inside the drawer. */
   .sidebar-level--two, .slide-leave-active { position: absolute; z-index: 4; inset: 0; width: 100%; }
 }

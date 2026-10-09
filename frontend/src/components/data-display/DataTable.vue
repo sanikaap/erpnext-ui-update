@@ -155,8 +155,8 @@ function image(row: FrappeDocument) {
 .table-wrap { overflow-x: auto; }
 .table-wrap--sticky { max-height: calc(100dvh - var(--topbar-height) - 32px); overflow: auto; overscroll-behavior: contain; }
 table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
-th { position: sticky; top: 0; z-index: 1; height: 38px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; }
-td { height: 50px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); font-size: var(--text-base); font-variant-numeric: tabular-nums; white-space: nowrap; }
+th { position: sticky; top: 0; z-index: 1; height: 38px; padding: 0 14px; color: var(--subtle-foreground); border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+td { height: 48px; padding: 0 14px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); font-size: var(--text-base); font-variant-numeric: tabular-nums; white-space: nowrap; }
 tbody tr:last-child td { border-bottom: 0; }
 .table-wrap--compact th { height: 34px; }
 .table-wrap--compact td { height: 38px; }
@@ -185,7 +185,7 @@ th.sorted svg { color: var(--primary); }
 .check-value--on { color: var(--foreground); }
 .check-value--on::before { background: var(--secondary); box-shadow: 0 0 0 3px var(--secondary-soft); }
 tbody tr { cursor: pointer; transition: background-color var(--dur-fast) var(--ease); }
-tbody tr:hover, tbody tr:focus-visible { outline: 0; background: var(--primary-softer); }
+tbody tr:hover, tbody tr:focus-visible { outline: 0; background: var(--surface-2); }
 tbody tr:focus-visible { box-shadow: inset 3px 0 var(--primary); }
 tbody tr.selected { background: var(--primary-soft); }
 tbody tr.selected .cell-titles strong { color: var(--primary-soft-foreground); }
@@ -193,7 +193,7 @@ tbody tr.selected td.cell-first { box-shadow: inset 3px 0 var(--primary); }
 tbody.refreshing { opacity: .55; transition: opacity var(--dur-fast) var(--ease); }
 .skeleton-row { cursor: default; }
 .skeleton-row:hover { background: none; }
-.cell-open { width: 36px; color: var(--subtle-foreground); text-align: right; }
+.cell-open { width: 36px; color: var(--icon-foreground); text-align: right; }
 .cell-open svg { opacity: 0; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 tbody tr:hover .cell-open svg { color: var(--primary); opacity: 1; transform: translateX(2px); }
 

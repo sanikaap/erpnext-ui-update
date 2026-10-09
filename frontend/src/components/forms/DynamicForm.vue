@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { AlertCircle, ChevronDown, MoreHorizontal } from 'lucide-vue-next';
+import { AlertCircle, ChevronDown, LayoutList, MoreHorizontal } from 'lucide-vue-next';
 import FieldRenderer from '@/components/forms/FieldRenderer.vue';
 import { buildLayout, evaluateCondition, fieldState, isTruthyValue, NO_VALUE_TYPES, TABLE_TYPES, type FormSectionLayout, type ValidationError } from '@/lib/doctype';
 import { applyFetchFrom } from '@/lib/fetch-from';
@@ -171,6 +171,26 @@ const inlineLabel = (field: ERPNextMetadataField) => field.fieldtype === 'Check'
 const noLabel = (field: ERPNextMetadataField) => ['Heading', 'HTML', 'Table', 'Image'].includes(field.fieldtype);
 const isWide = (field: ERPNextMetadataField) => TABLE_TYPES.has(field.fieldtype);
 
+/** Row count on a tab that is essentially one child table (e.g. "Items 3"); hidden when empty. */
+function tabCount(tab: (typeof visibleTabs.value)[number]) {
+  const fields = tab.sections.flatMap((section) => section.visible.flat());
+  const tables = fields.filter((field) => TABLE_TYPES.has(field.fieldtype));
+  if (tables.length !== 1) return null;
+  const isTheTab = fields.length <= 2 || tables[0].label.trim().toLowerCase() === tab.label.trim().toLowerCase();
+  const rows = props.doc[tables[0].fieldname];
+  return isTheTab && Array.isArray(rows) && rows.length ? rows.length : null;
+}
+/** A section holding only one child table: the table's own header is the section header. */
+const tableOnly = (section: (typeof visibleTabs.value)[number]['sections'][number]) => {
+  const fields = section.visible.flat();
+  return fields.length === 1 && TABLE_TYPES.has(fields[0].fieldtype);
+};
+/** Section heading: the metadata label; the form's untitled opening section reads "<DocType> details". */
+function sectionTitle(section: (typeof visibleTabs.value)[number]['sections'][number], index: number) {
+  if (section.label) return section.label;
+  return !props.dense && index === 0 && currentTab.value === visibleTabs.value[0] && !tableOnly(section) ? `${props.doctype} details` : '';
+}
+
 defineExpose({ tabs: visibleTabs, activeTab });
 </script>
 
@@ -186,7 +206,7 @@ defineExpose({ tabs: visibleTabs, activeTab });
         :class="['form-tab', { 'form-tab--active': tab.key === currentTab?.key }]"
         @click="pickTab(tab.key)"
       >
-        {{ tab.label }}<span v-if="tabHasError(tab)" class="form-tab-error" aria-label="has errors" />
+        {{ tab.label }}<span v-if="tabCount(tab) !== null" class="form-tab-count tabular">{{ tabCount(tab) }}</span><span v-if="tabHasError(tab)" class="form-tab-error" aria-label="has errors" />
       </button>
       <div v-if="overflowTabs.length" class="form-tab-more">
         <button
@@ -208,7 +228,7 @@ defineExpose({ tabs: visibleTabs, activeTab });
         <div
           v-if="moreTabsOpen"
           ref="moreMenu"
-          class="form-tab-menu"
+          class="menu-panel form-tab-menu"
           role="menu"
           :style="{ top: `${menuPosition.top}px`, right: `${menuPosition.right}px` }"
           @keydown.esc="closeMoreTabs(); moreButton?.focus()"
@@ -223,14 +243,15 @@ defineExpose({ tabs: visibleTabs, activeTab });
     <div v-if="!visibleTabs.length" class="form-empty">{{ hideEmpty ? 'No values recorded yet.' : 'This DocType has no fields to show.' }}</div>
 
     <div v-if="currentTab" class="form-sections" role="tabpanel">
-      <section v-for="section in currentTab.sections" :key="section.key" :class="['form-section', { 'form-section--untitled': !section.label }]">
-        <header v-if="section.label" class="section-head">
+      <section v-for="(section, sectionIndex) in currentTab.sections" :key="section.key" :class="['form-section', { 'form-section--untitled': !sectionTitle(section, sectionIndex), 'form-section--table': tableOnly(section) && !section.collapsible }]">
+        <header v-if="sectionTitle(section, sectionIndex) && !(tableOnly(section) && !section.collapsible)" class="section-head">
           <button v-if="section.collapsible" type="button" class="section-toggle" :aria-expanded="!isCollapsed(section)" @click="toggleSection(section)">
-            <ChevronDown :size="15" :class="['section-caret', { 'section-caret--closed': isCollapsed(section) }]" />
-            <h3>{{ section.label }}</h3>
+            <span class="section-icon" aria-hidden="true"><LayoutList :size="15" /></span>
+            <h3>{{ sectionTitle(section, sectionIndex) }}</h3>
             <span v-if="isCollapsed(section)" class="section-count">{{ section.visible.flat().length }} fields</span>
+            <ChevronDown :size="16" :class="['section-caret', { 'section-caret--closed': isCollapsed(section) }]" />
           </button>
-          <h3 v-else>{{ section.label }}</h3>
+          <div v-else class="section-title"><span class="section-icon" aria-hidden="true"><LayoutList :size="15" /></span><h3>{{ sectionTitle(section, sectionIndex) }}</h3></div>
           <p v-if="section.description && !isCollapsed(section)" v-html="sanitizeHtml(section.description)" />
         </header>
 
@@ -280,35 +301,44 @@ defineExpose({ tabs: visibleTabs, activeTab });
 <style scoped>
 .dynamic-form { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
 
-.form-tabs { position: sticky; z-index: 6; top: calc(var(--topbar-height) + var(--form-sticky-offset, 0px)); display: flex; gap: 4px; overflow-x: auto; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); box-shadow: var(--shadow-sm); scrollbar-width: none; }
+/* Tabs: an underlined strip on a white bar, sticky under the document header. */
+.form-tabs { position: sticky; z-index: 6; top: calc(var(--topbar-height) + var(--form-sticky-offset, 0px)); display: flex; gap: 4px; overflow-x: auto; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--surface) 96%, transparent); backdrop-filter: blur(8px); box-shadow: var(--shadow-sm); scrollbar-width: none; }
 .dynamic-form--dense .form-tabs { position: static; }
-.form-tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: 6px; height: 32px; padding: 0 12px; color: var(--muted-foreground); border: 0; border-radius: var(--radius-md); background: none; font-size: 13px; font-weight: 500; white-space: nowrap; transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
-.form-tab:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
-.form-tab:hover { color: var(--foreground); background: var(--muted); }
-.form-tab--active { color: var(--primary-soft-foreground); background: var(--primary-soft); font-weight: 600; }
+.form-tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: 7px; height: 48px; padding: 0 12px; color: var(--muted-foreground); border: 0; border-radius: 0; background: none; font-size: 13.5px; font-weight: 500; white-space: nowrap; transition: color var(--dur-fast) var(--ease); }
+.form-tab::after { position: absolute; right: 10px; bottom: 0; left: 10px; height: 2px; content: ''; border-radius: 2px 2px 0 0; background: transparent; transition: background-color var(--dur-fast) var(--ease); }
+.form-tab:focus-visible { outline: var(--focus-ring); outline-offset: -6px; border-radius: var(--radius-md); }
+.form-tab:hover { color: var(--foreground); }
+.form-tab:hover::after { background: var(--border-strong); }
+.form-tab--active { color: var(--primary-soft-foreground); font-weight: 600; }
+.form-tab--active::after, .form-tab--active:hover::after { background: var(--primary); }
+.form-tab-count { min-width: 20px; padding: 0 6px; color: var(--muted-foreground); border-radius: 999px; background: var(--muted); font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
+.form-tab--active .form-tab-count { color: var(--primary-soft-foreground); background: var(--primary-soft); }
 .form-tab-error { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }
 .form-tab-more { position: relative; flex: none; }
-.form-tab-more svg { color: var(--subtle-foreground); }
+.form-tab-more svg { color: var(--icon-foreground); }
 .form-tab-scrim { position: fixed; z-index: 29; inset: 0; }
-.form-tab-menu { position: fixed; z-index: 30; display: flex; min-width: 200px; max-width: calc(100vw - 16px); flex-direction: column; padding: 5px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-elevated); box-shadow: var(--shadow-lg); }
+.form-tab-menu { position: fixed; z-index: 30; max-width: calc(100vw - 16px); }
 .form-tab-menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 34px; padding: 0 10px; color: var(--foreground); border: 0; border-radius: var(--radius-md); background: none; font-size: 13px; text-align: left; }
 .form-tab-menu button:hover { background: var(--muted); }
 .form-tab-menu button:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
 .form-tab-menu button.active { color: var(--primary-soft-foreground); background: var(--primary-soft); font-weight: 600; }
 
-.form-sections { display: flex; flex-direction: column; gap: 14px; }
-.form-section { padding: 18px 20px 20px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); }
-.dynamic-form--dense .form-section { padding: 0 0 18px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; background: none; }
+/* Sections: white cards with an icon heading. */
+.form-sections { display: flex; flex-direction: column; gap: 16px; }
+.form-section { padding: 20px 22px 22px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-md); }
+.form-section--table { padding: 0; overflow: hidden; }
+.dynamic-form--dense .form-section { padding: 0 0 18px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; background: none; overflow: visible; }
 .dynamic-form--dense .form-section:last-child { border-bottom: 0; }
-.section-head { margin-bottom: 14px; }
-.section-head h3 { position: relative; padding-left: 12px; color: var(--foreground); font-size: 14px; font-weight: 600; letter-spacing: -.005em; }
-.section-head h3::before { position: absolute; top: 3px; bottom: 3px; left: 0; width: 3px; content: ''; border-radius: 3px; background: linear-gradient(var(--primary), var(--secondary)); }
-.section-head p { margin-top: 3px; padding-left: 12px; color: var(--muted-foreground); font-size: 12px; }
-.section-toggle { display: flex; align-items: center; gap: 4px; width: 100%; padding: 0; border: 0; background: none; text-align: left; }
-.section-toggle h3 { padding-left: 4px; }
-.section-toggle h3::before { display: none; }
-.section-caret { flex: none; color: var(--primary); transition: transform var(--dur-med) var(--ease); }
-.section-toggle:focus-visible { outline: var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+.section-head { margin-bottom: 18px; }
+.section-title, .section-toggle { display: flex; align-items: center; gap: 10px; }
+.section-head h3 { color: var(--foreground); font-size: 15px; font-weight: 600; letter-spacing: -.005em; }
+.section-icon { display: grid; width: 28px; height: 28px; flex: none; place-items: center; color: var(--primary); border-radius: 8px; background: var(--primary-softer); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 16%, transparent); }
+.dynamic-form--dense .section-icon { display: none; }
+.section-head p { margin-top: 6px; padding-left: 38px; color: var(--muted-foreground); font-size: 12.5px; }
+.section-toggle { width: 100%; padding: 0; border: 0; background: none; text-align: left; }
+.section-caret { flex: none; margin-left: 8px; color: var(--icon-foreground); transition: transform var(--dur-med) var(--ease), color var(--dur-fast) var(--ease); }
+.section-toggle:hover .section-caret { color: var(--primary); }
+.section-toggle:focus-visible { outline: var(--focus-ring); outline-offset: 4px; border-radius: var(--radius-sm); }
 .section-caret--closed { transform: rotate(-90deg); }
 .section-count { margin-left: auto; color: var(--subtle-foreground); font-size: 12px; }
 .form-section:has(.section-caret--closed) .section-head { margin-bottom: 0; transition: margin-bottom var(--dur-med) var(--ease); }
@@ -317,19 +347,26 @@ defineExpose({ tabs: visibleTabs, activeTab });
 .section-body-inner { min-height: 0; }
 .section-body--clip > .section-body-inner { overflow: hidden; }
 
+/* Fields */
 .section-grid { display: grid; grid-template-columns: repeat(var(--form-columns, 1), minmax(0, 1fr)); gap: 0 24px; }
-.section-column { display: flex; min-width: 0; flex-direction: column; gap: 14px; }
-.form-field { display: flex; min-width: 0; flex-direction: column; gap: 5px; }
-.field-label { display: flex; align-items: baseline; gap: 2px; color: var(--muted-foreground); font-size: 12px; font-weight: 500; }
+.section-column { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
+.form-field { display: flex; min-width: 0; flex-direction: column; gap: 6px; }
+.field-label { display: flex; align-items: baseline; gap: 2px; color: var(--foreground); font-size: 12.5px; font-weight: 500; }
+.form-field--readonly .field-label { color: var(--muted-foreground); }
 .form-field:focus-within .field-label { color: var(--primary-soft-foreground); }
 .field-required { margin-left: 2px; color: var(--danger); font-weight: 600; }
-.form-field--bold .field-label { color: var(--foreground); font-weight: 600; }
-.field-help { color: var(--help-foreground); font-size: 11.5px; line-height: 1.4; }
+.form-field--bold .field-label { font-weight: 600; }
+.field-help { color: var(--help-foreground); font-size: 11.5px; line-height: 1.45; }
 .field-error { display: flex; align-items: center; gap: 4px; color: var(--danger); font-size: 11.5px; font-weight: 500; }
 .form-field--invalid .field-label { color: var(--danger); }
 .form-empty { padding: 32px; color: var(--muted-foreground); font-size: 13px; text-align: center; }
+/* Form inputs are a touch taller than toolbar controls; compact grid cells keep their own height. */
+.dynamic-form:not(.dynamic-form--dense) .form-field > :deep(.control:not(textarea):not(.fr-textarea):not(.rich)),
+.dynamic-form:not(.dynamic-form--dense) .form-field > :deep(div > .control:not(textarea):not(.fr-textarea):not(.rich)) { height: 40px; }
+.dynamic-form:not(.dynamic-form--dense) .form-field :deep(.fr-readonly) { min-height: 40px; }
 
 @media (max-width: 900px) {
-  .section-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .section-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .form-section { padding: 16px; }
 }
 </style>
