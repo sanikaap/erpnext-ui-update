@@ -52,13 +52,13 @@ const groups = computed(() => {
   <div v-if="module" class="page stagger-in" :style="{ '--c': `var(${module.color})` }">
     <section class="page-header">
       <div><p class="eyebrow">{{ module.label }} · Reports</p><h1 class="page-title">{{ module.label }} reports<span v-if="reports.length" class="count-pill tabular">{{ reports.length }}</span></h1><p class="page-subtitle">ERPNext reports for this module, run inside this workspace.</p></div>
-      <label class="report-search"><Search :size="14" /><input v-model="search" placeholder="Search reports…" aria-label="Search reports" /></label>
+      <label class="search-field report-search"><Search :size="14" /><input v-model="search" placeholder="Search reports…" aria-label="Search reports" /></label>
     </section>
     <ErrorState v-if="error" :message="error" @retry="load" />
     <div v-else-if="loading" class="report-grid"><span v-for="index in 9" :key="index" class="skeleton" style="height: 58px; border-radius: 12px" /></div>
     <EmptyState v-else-if="!groups.length" title="No reports found" :description="search ? 'Try a different search.' : 'This module has no enabled reports.'" :icon="FileSpreadsheet" />
     <section v-for="[group, items] in groups" v-else :key="group" class="report-group">
-      <h2 class="group-title">{{ group }}</h2>
+      <h2 class="group-label">{{ group }}</h2>
       <div class="report-grid">
         <RouterLink v-for="report in items" :key="report.name" :to="reportRoute(report.name)" class="report-card">
           <span class="report-icon"><FileSpreadsheet :size="15" /></span>
@@ -71,15 +71,12 @@ const groups = computed(() => {
 </template>
 
 <style scoped>
-.count-pill { display: inline-flex; align-items: center; height: 22px; margin-left: 10px; padding: 0 9px; vertical-align: 3px; color: var(--primary-soft-foreground); border-radius: 999px; background: var(--primary-soft); font-size: 12px; font-weight: 600; }
-.report-search { display: flex; align-items: center; gap: 8px; width: 260px; height: 36px; padding: 0 11px; color: var(--subtle-foreground); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--input-background); }
-.report-search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
-.report-search input { min-width: 0; flex: 1; border: 0; outline: 0; background: none; font-size: 13px; }
+.report-search { width: 260px; height: 36px; }
 .report-group { display: flex; flex-direction: column; gap: 10px; }
-.group-title { color: color-mix(in srgb, var(--c) 70%, var(--muted-foreground)); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .report-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-.report-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); transition: border-color .15s, box-shadow .15s; }
-.report-card:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--border)); }
+.report-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-sm); transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-med) var(--ease); }
+.report-card:hover { border-color: color-mix(in srgb, var(--c) 40%, var(--border)); box-shadow: var(--shadow-hover); }
+.report-card:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
 .report-icon { display: grid; width: 32px; height: 32px; flex: none; place-items: center; color: var(--c); border-radius: 9px; background: color-mix(in srgb, var(--c) 12%, transparent); }
 .report-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 .report-copy strong { overflow: hidden; color: var(--foreground); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }

@@ -78,7 +78,8 @@ export function useNavigation() {
       const group = groups.find((entry) => entry.label === module.workspace);
       if (group) group.modules.push(module); else groups.push({ label: module.workspace, modules: [module] });
     }
-    return groups;
+    // Standard ERPNext modules first, custom workspaces (NGO…) below them.
+    return groups.sort((a, b) => Number(a.label !== 'ERPNext') - Number(b.label !== 'ERPNext'));
   });
 
   return { ready, modules, workspaces, isAvailable };

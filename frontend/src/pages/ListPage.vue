@@ -284,10 +284,10 @@ function clearCriteria() {
           </button>
         </nav>
         <div class="table-tools">
-          <label class="tool-search">
+          <label class="search-field tool-search">
             <Search :size="14" />
             <input v-model="search" :placeholder="`Search ${title.toLowerCase()}…`" :aria-label="`Search ${title}`" />
-            <button v-if="search" type="button" class="search-clear" aria-label="Clear search" @click="search = ''"><X :size="13" /></button>
+            <button v-if="search" type="button" class="search-field-clear" aria-label="Clear search" @click="search = ''"><X :size="13" /></button>
           </label>
           <QuickFilters v-if="ready" v-model="filters" :fields="metadata" class="tool-quick" />
           <div class="tool-actions">
@@ -375,15 +375,9 @@ function clearCriteria() {
 .demo-note { display: inline-flex; margin-top: 8px; padding: 3px 10px; color: var(--accent-soft-foreground); border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 999px; background: var(--accent-soft); font-size: 11.5px; font-weight: 600; }
 .list-eyebrow { display: flex; align-items: center; gap: 7px; }
 .module-dot { width: 8px; height: 8px; border-radius: 3px; background: var(--module-color, var(--primary)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-color, var(--primary)) 18%, transparent); }
-.count-pill { display: inline-flex; align-items: center; height: 22px; margin-left: 10px; padding: 0 9px; vertical-align: 3px; color: var(--primary-soft-foreground); border-radius: 999px; background: var(--primary-soft); font-size: 12px; font-weight: 600; letter-spacing: 0; }
 .list-card { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-md); }
-.table-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
-.tool-search { display: flex; align-items: center; gap: 8px; width: 280px; height: 34px; padding: 0 8px 0 11px; color: var(--subtle-foreground); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--input-background); transition: border-color .15s, box-shadow .15s; }
-.tool-search:focus-within { color: var(--primary); border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
-.tool-search input { min-width: 0; flex: 1; height: 100%; color: var(--foreground); border: 0; outline: 0; background: transparent; font-size: 13px; }
-.tool-search input::placeholder { color: var(--subtle-foreground); }
-.search-clear { display: grid; width: 20px; height: 20px; place-items: center; color: var(--subtle-foreground); border: 0; border-radius: 5px; background: none; }
-.search-clear:hover { color: var(--foreground); background: var(--muted); }
+.table-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.tool-search { width: 280px; }
 .tool-quick { flex: 1; }
 .tool-actions { display: flex; gap: 6px; margin-left: auto; }
 
@@ -403,13 +397,13 @@ function clearCriteria() {
 .status-tab:focus-visible { outline: var(--focus-ring); outline-offset: -4px; border-radius: var(--radius-md); }
 .status-tab--active { color: var(--foreground); font-weight: 600; }
 .status-tab--active::after { background: var(--primary); }
-.status-tab-count { min-width: 20px; padding: 0 6px; color: var(--muted-foreground); border-radius: 999px; background: var(--muted); font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
+.status-tab-count { min-width: 20px; padding: 0 6px; color: var(--subtle-foreground); border-radius: 999px; background: var(--muted); font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
 .status-tab--active .status-tab-count { color: var(--primary-soft-foreground); background: var(--primary-soft); }
 .pagination-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .link-button { padding: 0; color: var(--primary-soft-foreground); border: 0; background: none; font-size: inherit; font-weight: 600; }
 .link-button:hover { text-decoration: underline; }
 .link-button:focus-visible { outline: var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
-.bulk-bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border)); background: linear-gradient(90deg, var(--primary-soft), var(--secondary-soft)); }
+.bulk-bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border)); background: var(--primary-softer); box-shadow: inset 3px 0 var(--primary); }
 .bulk-bar strong { color: var(--primary-soft-foreground); font-size: 13px; }
 .bulk-link { padding: 0; color: var(--muted-foreground); border: 0; background: none; font-size: 12.5px; }
 .bulk-link:hover { color: var(--foreground); text-decoration: underline; }

@@ -12,6 +12,11 @@ import SegmentedBar from '@/components/charts/SegmentedBar.vue';
 import RankBars, { type RankRow } from '@/components/charts/RankBars.vue';
 import ChartPlaceholder from '@/components/charts/ChartPlaceholder.vue';
 import DonutChart from '@/components/charts/DonutChart.vue';
+import DashboardHeader from '@/components/dashboards/DashboardHeader.vue';
+import ActivityFeed, { type ActivityRow } from '@/components/dashboards/ActivityFeed.vue';
+import ValueTable, { type ValueRow } from '@/components/dashboards/ValueTable.vue';
+import AlertList, { type AlertRow } from '@/components/dashboards/AlertList.vue';
+import QuickActions, { type QuickAction } from '@/components/dashboards/QuickActions.vue';
 import { useCurrentUser } from '@/composables/useCurrentUser';
 import { useSessionDefaults } from '@/composables/useSessionDefaults';
 import { useNavigation } from '@/composables/useNavigation';
@@ -21,6 +26,7 @@ import { documentApi } from '@/services/document-api';
 import { getDocumentRouteForDocType } from '@/config/navigation';
 import { getModuleForPath } from '@/app/module-registry';
 import { documentStatus } from '@/lib/display';
+import type { StatusTone } from '@/types/erp';
 import { formatCurrency, relativeTime, today } from '@/lib/doctype';
 import type { ChartSegment, FrappeDocument } from '@/types/erp';
 
@@ -233,6 +239,25 @@ const shortcuts = [
   { label: 'New Stock Entry', detail: 'Stock', doctype: 'Stock Entry', icon: PackageCheck, color: '--mod-manufacturing' },
 ];
 
+// ---------- Reference-layout rows ----------
+const statusToken: Record<StatusTone, string> = { green: '--success', rose: '--danger', amber: '--warning', blue: '--info', cyan: '--accent', violet: '--primary', slate: '--chart-neutral' };
+const activityRows = computed<ActivityRow[]>(() => recentRows.value.map((row) => ({
+  key: row.key, icon: row.icon, tone: row.status ? statusToken[row.status.tone] : row.color,
+  title: row.doctype, titleMeta: row.name,
+  subtitle: [row.party || '—', row.amount, row.status?.label].filter(Boolean).join(' · '),
+  time: row.when, to: { name: 'document-detail', params: { doctype: row.doctype, name: row.name } },
+})));
+const customerRows = computed<ValueRow[]>(() => topCustomers.value.map((row) => ({
+  key: row.key, label: row.label, value: row.display, amount: row.sub?.split(' ')[0], to: row.to as ValueRow['to'],
+})));
+const attentionTone = { rose: '--danger', amber: '--warning', blue: '--info', slate: '--chart-neutral' } as const;
+const attentionRows = computed<AlertRow[]>(() => attention.value.map((entry) => ({
+  key: entry.key, icon: entry.icon, tone: attentionTone[entry.tone], title: entry.title, detail: entry.detail,
+  badge: { label: entry.tone === 'rose' ? 'Overdue' : entry.tone === 'amber' ? 'Pending' : entry.tone === 'blue' ? 'Open' : 'Draft', tone: entry.tone },
+  to: entry.to,
+})));
+const quickActions = computed<QuickAction[]>(() => shortcuts.slice(0, 5).map((shortcut) => ({ label: shortcut.label, icon: shortcut.icon, to: { name: 'document-create', params: { doctype: shortcut.doctype } } })));
+
 const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 const greeting = computed(() => {
   const hour = new Date().getHours();
@@ -242,184 +267,117 @@ const greeting = computed(() => {
 </script>
 
 <template>
-  <div class="page dashboard">
-    <section class="hero stagger-in">
-      <div class="hero-copy">
-        <p class="eyebrow hero-eyebrow">{{ todayLabel }}</p>
-        <h1 class="page-title">{{ greeting }}</h1>
-        <p class="page-subtitle">
-          Live from ERPNext<template v-if="counts.items != null"> · {{ counts.items.toLocaleString() }} active items</template><template v-if="counts.customers != null"> · {{ counts.customers.toLocaleString() }} customers</template>
-        </p>
-      </div>
-      <BaseButton variant="quiet" size="sm" :loading="loading" @click="load"><RefreshCw v-if="!loading" :size="14" />Refresh</BaseButton>
-    </section>
+  <div class="page">
+    <div class="dashboard">
+      <DashboardHeader>
+        <template #subtitle>Here's what's happening across your business · {{ todayLabel }}<template v-if="counts.items != null"> · {{ counts.items.toLocaleString() }} active items</template><template v-if="counts.customers != null"> · {{ counts.customers.toLocaleString() }} customers</template></template>
+        <button type="button" class="tool-button tool-button--icon" :disabled="loading" aria-label="Refresh" title="Refresh" @click="load"><RefreshCw :size="15" :class="{ spin: loading }" /></button>
+        <BaseButton variant="primary" size="md" @click="$router.push({ name: 'document-create', params: { doctype: 'Sales Invoice' } })"><Plus :size="15" />New Sales Invoice</BaseButton>
+      </DashboardHeader>
 
-    <section class="grid-1-1 top-row">
-      <PanelCard title="Needs your attention" eyebrow="Work waiting on you and your team">
-        <div v-if="loading" class="list-skeleton"><span v-for="index in 3" :key="index" class="skeleton" style="height: 44px; border-radius: 10px" /></div>
-        <template v-else-if="attention.length">
-          <RouterLink v-for="entry in attention" :key="entry.key" :to="entry.to" class="list-row list-row--link">
-            <span :class="['row-icon', `tone-${entry.tone}`]"><component :is="entry.icon" :size="16" /></span>
-            <span class="row-copy"><strong>{{ entry.title }}</strong><small>{{ entry.detail }}</small></span>
-            <span class="row-open">Open<ArrowRight :size="14" /></span>
-          </RouterLink>
-        </template>
-        <p v-else class="caught-up"><CheckCircle2 :size="16" />You're all caught up.</p>
-      </PanelCard>
+      <section v-if="metrics.length" class="dash-kpis">
+        <MetricCard v-for="(metric, index) in metrics" :key="metric.label" :metric="metric" :class="['stagger-in', `delay-${index + 1}`]" />
+      </section>
 
-      <PanelCard title="Create" eyebrow="Start a new document">
-        <div class="shortcut-grid">
-          <RouterLink v-for="shortcut in shortcuts" :key="shortcut.doctype" :to="{ name: 'document-create', params: { doctype: shortcut.doctype } }" class="shortcut" :style="{ '--c': `var(${shortcut.color})` }">
-            <span class="shortcut-icon"><component :is="shortcut.icon" :size="16" /></span>
-            <span class="shortcut-copy"><strong>{{ shortcut.label }}</strong><small>{{ shortcut.detail }}</small></span>
-            <Plus :size="14" class="shortcut-plus" />
-          </RouterLink>
-        </div>
-      </PanelCard>
-    </section>
-
-    <section v-if="metrics.length" class="metric-grid">
-      <MetricCard v-for="(metric, index) in metrics" :key="metric.label" :metric="metric" :class="['stagger-in', `delay-${index + 1}`]" />
-    </section>
-
-    <section v-if="ngoMetrics.length" class="ngo-strip" aria-labelledby="ngo-heading">
-      <header class="strip-head"><h2 id="ngo-heading">NGO</h2><span>{{ ORG.fy }} · demo data</span></header>
-      <div class="metric-grid">
-        <MetricCard v-for="metric in ngoMetrics" :key="metric.label" :metric="metric" />
-      </div>
-      <div class="grid-2-1">
-        <PanelCard v-if="ngoPanels.trend && ngoPanels.trend.kind === 'trend'" :title="ngoPanels.trend.title" :eyebrow="ngoPanels.trend.note">
-          <TrendChart :labels="ngoPanels.trend.labels" :series="ngoPanels.trend.series" type="line" :height="240" :format-value="lakh" />
-        </PanelCard>
-        <PanelCard v-if="ngoPanels.heads && ngoPanels.heads.kind === 'donut'" :title="ngoPanels.heads.title" :eyebrow="ngoPanels.heads.note">
-          <DonutChart :segments="ngoPanels.heads.segments" :label="ngoPanels.heads.title" :center-label="ngoPanels.heads.centerLabel" :center-value="ngoPanels.heads.centerValue" :size="170" />
-        </PanelCard>
-      </div>
-    </section>
-
-    <section class="grid-2-1">
-      <PanelCard title="Sales & purchases" :eyebrow="`Submitted invoices, last ${DAYS} days`" class="chart-panel">
-        <template v-if="loading"><span class="skeleton" style="height: 300px; border-radius: 10px" /></template>
-        <template v-else-if="hasChartData">
-          <div class="chart-summary">
-            <div v-for="series in chartSeries" :key="series.name" class="summary-stat">
-              <span><i :style="{ background: `var(${series.color})` }" />{{ series.name }}</span>
-              <strong class="tabular">{{ money(series.name === 'Sales invoiced' ? salesNow : purchasesNow) }}</strong>
+      <section class="dash-main">
+        <PanelCard title="Sales & Purchases" :eyebrow="`Submitted invoices, last ${DAYS} days`">
+          <template v-if="hasChartData" #actions><span v-for="series in chartSeries.filter((entry) => entry.data.some(Boolean))" :key="series.name" class="legend-dot"><i :style="{ background: `var(${series.color})` }" />{{ series.name }}</span></template>
+          <template v-if="loading"><span class="skeleton" style="height: 300px; border-radius: 10px" /></template>
+          <template v-else-if="hasChartData">
+            <div class="chart-summary">
+              <div v-for="series in chartSeries" :key="series.name" class="summary-stat">
+                <span>{{ series.name }}</span>
+                <strong>{{ money(series.name === 'Sales invoiced' ? salesNow : purchasesNow) }}</strong>
+              </div>
+              <div v-if="chartSeries.length > 1" class="summary-stat summary-stat--net">
+                <span>Net</span>
+                <strong :class="netNow >= 0 ? 'change--up' : 'change--down'">{{ netNow >= 0 ? '+' : '−' }}{{ money(Math.abs(netNow)) }}</strong>
+              </div>
             </div>
-            <div v-if="chartSeries.length > 1" class="summary-stat summary-stat--net">
-              <span>Net</span>
-              <strong :class="['tabular', netNow >= 0 ? 'is-up' : 'is-down']">{{ netNow >= 0 ? '+' : '−' }}{{ money(Math.abs(netNow)) }}</strong>
-            </div>
+            <TrendChart :labels="chartLabels" :series="chartSeries" type="line" :height="250" :format-value="compactMoney" hide-legend />
+          </template>
+          <ChartPlaceholder v-else kind="line" :height="300" title="No submitted invoices yet" :description="`Sales and purchase invoices from the last ${DAYS} days will chart here.`" :icon="BarChart3">
+            <BaseButton variant="primary" size="sm" @click="$router.push({ name: 'document-create', params: { doctype: 'Sales Invoice' } })"><Plus :size="14" />New Sales Invoice</BaseButton>
+          </ChartPlaceholder>
+        </PanelCard>
+
+        <PanelCard title="Recent Transactions" eyebrow="Selling, buying and accounts">
+          <template #actions><RouterLink :to="getDocumentRouteForDocType('Sales Invoice')" class="view-all">View all<ArrowRight :size="13" /></RouterLink></template>
+          <div v-if="loading" class="dash-list-skeleton"><span v-for="index in 5" :key="index" class="skeleton" style="height: 46px; border-radius: 10px" /></div>
+          <ActivityFeed v-else-if="activityRows.length" :rows="activityRows.slice(0, 6)" />
+          <ChartPlaceholder v-else kind="rows" :height="260" :icon="ReceiptText" title="No transactions yet" description="Quotations, orders, invoices and payments will appear here as your team works." />
+        </PanelCard>
+      </section>
+
+      <section class="dash-three">
+        <PanelCard title="Top Customers" no-padding>
+          <template #actions><RouterLink :to="getDocumentRouteForDocType('Customer')" class="view-all">View all<ArrowRight :size="13" /></RouterLink></template>
+          <div v-if="loading" class="dash-list-skeleton dash-pad"><span v-for="index in 5" :key="index" class="skeleton" style="height: 36px; border-radius: 8px" /></div>
+          <ValueTable v-else-if="customerRows.length" :rows="customerRows" label-header="Customer" :value-header="`Invoiced · ${DAYS}d`" amount-header="Invoices" />
+          <div v-else class="dash-pad"><ChartPlaceholder kind="rows" :height="240" title="No customer invoices yet" description="Your biggest customers this month will rank here." :icon="Trophy" /></div>
+        </PanelCard>
+
+        <PanelCard title="Needs Your Attention">
+          <div v-if="loading" class="dash-list-skeleton"><span v-for="index in 4" :key="index" class="skeleton" style="height: 46px; border-radius: 10px" /></div>
+          <AlertList v-else-if="attentionRows.length" :rows="attentionRows.slice(0, 5)" />
+          <p v-else class="caught-up"><CheckCircle2 :size="16" />You're all caught up.</p>
+        </PanelCard>
+
+        <PanelCard title="Quick Actions"><QuickActions :actions="quickActions" /></PanelCard>
+      </section>
+
+      <section class="dash-two">
+        <PanelCard title="Receivables by Age" eyebrow="Outstanding balance by days past due">
+          <span v-if="loading" class="skeleton" style="height: 220px; border-radius: 10px" />
+          <SegmentedBar v-else-if="ageing.length" :segments="ageing" :heading="`${money(outstandingTotal)} outstanding`" label="Outstanding receivables split by days past due" />
+          <ChartPlaceholder v-else kind="bar" :height="220" title="Nothing outstanding" description="Every submitted sales invoice is fully paid." :icon="CheckCircle2" />
+        </PanelCard>
+        <PanelCard title="Collection Rate" :eyebrow="`Paid share of the last ${DAYS} days’ invoicing`">
+          <span v-if="loading" class="skeleton" style="height: 220px; border-radius: 10px" />
+          <div v-else-if="salesNow" class="gauge-body">
+            <DonutGauge :value="collectionRate" label="collected" color="--chart-1" />
+            <dl class="gauge-stats">
+              <div><dt>Invoiced</dt><dd class="tabular">{{ compactMoney(salesNow) }}</dd></div>
+              <div><dt>Still unpaid</dt><dd class="tabular">{{ compactMoney(unpaidRecent) }}</dd></div>
+            </dl>
           </div>
-          <TrendChart :labels="chartLabels" :series="chartSeries" type="line" :height="260" :format-value="compactMoney" hide-legend />
-        </template>
-        <ChartPlaceholder v-else kind="line" :height="300" title="No submitted invoices yet" :description="`Sales and purchase invoices from the last ${DAYS} days will chart here.`" :icon="BarChart3">
-          <BaseButton variant="primary" size="sm" @click="$router.push({ name: 'document-create', params: { doctype: 'Sales Invoice' } })"><Plus :size="14" />New Sales Invoice</BaseButton>
-        </ChartPlaceholder>
-      </PanelCard>
+          <ChartPlaceholder v-else kind="donut" :height="220" title="Nothing invoiced yet" description="The share of invoicing already paid shows here." :icon="CircleDollarSign" />
+        </PanelCard>
+      </section>
 
-      <PanelCard title="Collection rate" :eyebrow="`Paid share of the last ${DAYS} days’ invoicing`">
-        <span v-if="loading" class="skeleton" style="height: 300px; border-radius: 10px" />
-        <div v-else-if="salesNow" class="gauge-body">
-          <DonutGauge :value="collectionRate" label="collected" color="--chart-1" />
-          <dl class="gauge-stats">
-            <div><dt>Invoiced</dt><dd class="tabular">{{ compactMoney(salesNow) }}</dd></div>
-            <div><dt>Still unpaid</dt><dd class="tabular">{{ compactMoney(unpaidRecent) }}</dd></div>
-          </dl>
+      <section v-if="ngoMetrics.length" class="ngo-strip" aria-labelledby="ngo-heading">
+        <header class="strip-head"><h2 id="ngo-heading" class="section-title">NGO</h2><span class="demo-tag">Demo data</span><span>{{ ORG.fy }}</span></header>
+        <div class="dash-kpis">
+          <MetricCard v-for="metric in ngoMetrics" :key="metric.label" :metric="metric" />
         </div>
-        <ChartPlaceholder v-else kind="donut" :height="300" title="Nothing invoiced yet" description="The share of invoicing already paid shows here." :icon="CircleDollarSign" />
-      </PanelCard>
-    </section>
-
-    <section class="grid-1-1">
-      <PanelCard title="Top customers" :eyebrow="`By invoiced value, last ${DAYS} days`">
-        <div v-if="loading" class="list-skeleton"><span v-for="index in 5" :key="index" class="skeleton" style="height: 40px; border-radius: 10px" /></div>
-        <RankBars v-else-if="topCustomers.length" :rows="topCustomers" label="Top customers by invoiced value" colorful />
-        <ChartPlaceholder v-else kind="rows" :height="240" title="No customer invoices yet" description="Your biggest customers this month will rank here." :icon="Trophy" />
-      </PanelCard>
-
-      <PanelCard title="Receivables by age" eyebrow="Outstanding balance by days past due">
-        <span v-if="loading" class="skeleton" style="height: 240px; border-radius: 10px" />
-        <SegmentedBar v-else-if="ageing.length" :segments="ageing" :heading="`${money(outstandingTotal)} outstanding`" label="Outstanding receivables split by days past due" />
-        <ChartPlaceholder v-else kind="bar" :height="240" title="Nothing outstanding" description="Every submitted sales invoice is fully paid." :icon="CheckCircle2" />
-      </PanelCard>
-    </section>
-
-    <PanelCard title="Recent transactions" eyebrow="Latest changes across selling, buying and accounts">
-      <div v-if="loading" class="list-skeleton"><span v-for="index in 5" :key="index" class="skeleton" style="height: 44px; border-radius: 10px" /></div>
-      <template v-else-if="recentRows.length">
-        <RouterLink v-for="row in recentRows" :key="row.key" :to="{ name: 'document-detail', params: { doctype: row.doctype, name: row.name } }" class="list-row list-row--link" :style="{ '--c': `var(${row.color})` }">
-          <span class="row-icon"><component :is="row.icon" :size="16" /></span>
-          <span class="row-copy"><strong>{{ row.doctype }} {{ row.name }}</strong><small>{{ row.party || '—' }} · {{ row.when }}</small></span>
-          <span class="row-end"><strong v-if="row.amount" class="tabular">{{ row.amount }}</strong><BaseBadge v-if="row.status" :tone="row.status.tone" :label="row.status.label" /></span>
-        </RouterLink>
-      </template>
-      <ChartPlaceholder v-else kind="rows" :height="220" title="No transactions yet" description="Quotations, orders, invoices and payments will appear here as your team works." :icon="ReceiptText" />
-    </PanelCard>
+        <div class="dash-main">
+          <PanelCard v-if="ngoPanels.trend && ngoPanels.trend.kind === 'trend'" :title="ngoPanels.trend.title" :eyebrow="ngoPanels.trend.note">
+            <TrendChart :labels="ngoPanels.trend.labels" :series="ngoPanels.trend.series" type="line" :height="240" :format-value="lakh" />
+          </PanelCard>
+          <PanelCard v-if="ngoPanels.heads && ngoPanels.heads.kind === 'donut'" :title="ngoPanels.heads.title" :eyebrow="ngoPanels.heads.note">
+            <DonutChart :segments="ngoPanels.heads.segments" :label="ngoPanels.heads.title" :center-label="ngoPanels.heads.centerLabel" :center-value="ngoPanels.heads.centerValue" :size="170" />
+          </PanelCard>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.hero { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 20px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: color-mix(in srgb, var(--primary) 4%, var(--surface)); }
-.hero .page-title { margin-top: 2px; font-size: 20px; }
-.hero .page-subtitle { margin-top: 1px; }
-.hero-eyebrow { color: var(--primary-soft-foreground); }
-.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.grid-2-1 { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 14px; }
-.grid-1-1 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-
-.chart-summary { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 32px; margin-bottom: 14px; }
-.summary-stat { display: flex; flex-direction: column; gap: 4px; }
-.summary-stat span { display: inline-flex; align-items: center; gap: 7px; color: var(--subtle-foreground); font-size: 12px; font-weight: 500; }
-.summary-stat i { width: 10px; height: 10px; border-radius: 3px; }
-.summary-stat strong { color: var(--foreground); font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.chart-summary { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 32px; margin-bottom: 10px; }
+.summary-stat strong { font-size: 22px; }
 .summary-stat--net { margin-left: auto; padding-left: 20px; border-left: 1px solid var(--border); }
 .summary-stat--net strong { font-size: 18px; }
-.summary-stat .is-up { color: var(--success-soft-foreground); }
-.summary-stat .is-down { color: var(--danger-soft-foreground); }
-
+.caught-up { display: flex; align-items: center; gap: 8px; color: var(--muted-foreground); font-size: 13px; }
+.caught-up svg { flex: none; color: var(--secondary); }
 .gauge-body { display: flex; flex-direction: column; align-items: center; gap: 18px; padding-top: 4px; }
 .gauge-stats { display: grid; grid-template-columns: 1fr 1fr; width: 100%; margin: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-tint); }
 .gauge-stats div { padding: 10px 14px; }
 .gauge-stats div + div { border-left: 1px solid var(--border); }
 .gauge-stats dt { color: var(--muted-foreground); font-size: 12px; }
 .gauge-stats dd { margin: 2px 0 0; color: var(--foreground); font-size: 17px; font-weight: 700; }
-
-.list-skeleton { display: flex; flex-direction: column; gap: 8px; }
-.list-row { --c: var(--primary); display: flex; align-items: center; gap: 12px; margin: 0 -22px; padding: 11px 22px; border-bottom: 1px solid var(--border); }
-.list-row:first-child { margin-top: -8px; }
-.list-row:last-child { margin-bottom: -10px; border-bottom: 0; }
-.list-row--link { transition: background-color var(--dur-fast) var(--ease); }
-.list-row--link:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
-.list-row--link:hover { background: color-mix(in srgb, var(--c) 6%, transparent); }
-.row-open { display: inline-flex; flex: none; align-items: center; gap: 4px; color: var(--primary-soft-foreground); font-size: 12.5px; font-weight: 600; }
-.row-open svg { transition: transform var(--dur-fast) var(--ease); }
-.list-row--link:hover .row-open svg { transform: translateX(2px); }
-.caught-up { display: flex; align-items: center; gap: 8px; color: var(--muted-foreground); font-size: 13px; }
-.caught-up svg { flex: none; color: var(--secondary); }
-.ngo-strip { display: flex; flex-direction: column; gap: 10px; }
-.strip-head { display: flex; align-items: baseline; gap: 10px; }
-.strip-head h2 { color: var(--foreground); font-size: 14px; font-weight: 600; }
+.ngo-strip { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--border); }
+.strip-head { display: flex; align-items: center; gap: 10px; }
 .strip-head span { color: var(--subtle-foreground); font-size: 12px; }
-.row-icon { display: grid; width: 36px; height: 36px; flex: none; place-items: center; color: var(--c); border-radius: 10px; background: color-mix(in srgb, var(--c) 12%, transparent); }
-.row-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
-.row-copy strong { overflow: hidden; color: var(--foreground); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.row-copy small { overflow: hidden; color: var(--muted-foreground); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.row-end { display: flex; flex: none; flex-direction: column; align-items: flex-end; gap: 4px; }
-.row-end strong { color: var(--foreground); font-size: 13px; font-weight: 600; }
-
-.shortcut-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.shortcut { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
-.shortcut:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
-.shortcut:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--border)); }
-.shortcut-icon { display: grid; width: 32px; height: 32px; flex: none; place-items: center; color: var(--c); border-radius: 9px; background: color-mix(in srgb, var(--c) 13%, transparent); }
-.shortcut-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; line-height: 1.3; }
-.shortcut-copy strong { overflow: hidden; color: var(--foreground); font-size: 12.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.shortcut-copy small { color: var(--subtle-foreground); font-size: 11.5px; }
-.shortcut-plus { flex: none; color: var(--subtle-foreground); }
-.shortcut:hover .shortcut-plus { color: var(--c); }
-
-@media (max-width: 1200px) { .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 1000px) { .grid-2-1, .grid-1-1 { grid-template-columns: 1fr; } }
-@media (max-width: 520px) { .metric-grid, .shortcut-grid { grid-template-columns: 1fr; } .hero { align-items: flex-start; flex-direction: column; } }
+.strip-head .demo-tag { padding: 1px 8px; color: var(--accent-soft-foreground); border-radius: 999px; background: var(--accent-soft); font-size: 11.5px; font-weight: 600; }
 </style>

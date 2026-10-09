@@ -3,6 +3,7 @@ import { watch } from 'vue';
 import { RouterView, useRoute } from 'vue-router';
 import Sidebar from '@/components/navigation/Sidebar.vue';
 import Topbar from '@/components/navigation/Topbar.vue';
+import Breadcrumbs from '@/components/navigation/Breadcrumbs.vue';
 import ToastHost from '@/components/feedback/ToastHost.vue';
 import ConfirmHost from '@/components/feedback/ConfirmHost.vue';
 import { useLayoutStore } from '@/stores/layout';
@@ -21,6 +22,7 @@ watch(() => route.fullPath, () => { layout.mobileSidebarOpen = false; });
     <div class="main-column">
       <Topbar @toggle-menu="layout.mobileSidebarOpen = !layout.mobileSidebarOpen" />
       <main class="page-body">
+        <Breadcrumbs />
         <RouterView v-slot="{ Component }">
           <Transition name="route-fade"><component :is="Component" :key="route.name === 'document-detail' ? undefined : route.path" /></Transition>
         </RouterView>
