@@ -58,9 +58,14 @@ function render() {
   const surface = token('--surface-elevated');
   const font = token('--font-sans');
   const format = props.formatValue ?? ((value: number) => value.toLocaleString());
-  const isLine = props.type === 'line';
+  // Series with no figures at all are not drawn (a flat line on zero says nothing).
+  const filled = (entry: TrendSeries) => entry.data.filter(Boolean).length;
+  const drawn = props.series.some(filled) ? props.series.filter(filled) : props.series;
+  // A line through mostly-empty buckets reads as spikes on a flat baseline: show those as columns.
+  const sparse = props.type === 'line' && drawn.every((entry) => filled(entry) / Math.max(1, entry.data.length) < 0.3);
+  const isLine = props.type === 'line' && !sparse;
   // Direct-label the line ends when there are few series (≤ 3); otherwise the legend carries identity.
-  const directLabels = isLine && props.series.length <= 3 && props.labels.length > 1;
+  const directLabels = isLine && drawn.length <= 3 && props.labels.length > 1;
 
   chart.setOption({
     animation: !reducedMotion(),
@@ -109,11 +114,11 @@ function render() {
       axisLabel: { color: axis, fontSize: 11, formatter: (value: number) => format(value) },
       splitLine: { lineStyle: { color: grid, type: [3, 4] } },
     },
-    series: props.series.map((entry) => {
+    series: drawn.map((entry) => {
       const color = token(entry.color);
       if (!isLine) {
         const fill = (base: string) => new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: base }, { offset: 1, color: alpha(base, .62) }]);
-        const perBar = props.barColors && props.series.length === 1;
+        const perBar = props.barColors && drawn.length === 1;
         return {
           name: entry.name, type: 'bar', stack: props.stacked ? 'total' : undefined,
           data: perBar ? entry.data.map((value, index) => ({ value, itemStyle: { color: fill(token(props.barColors![index] ?? entry.color)) } })) : entry.data,
@@ -124,11 +129,12 @@ function render() {
       }
       return {
         name: entry.name, type: 'line', data: entry.data,
-        smooth: 0.3, smoothMonotone: 'x',
+        // Soft curves; monotone so the curve never dips below zero between points.
+        smooth: 0.55, smoothMonotone: 'x',
         symbol: 'circle', symbolSize: 8, showSymbol: false,
         lineStyle: { color, width: 2.5, shadowColor: alpha(color, .35), shadowBlur: 8, shadowOffsetY: 4 },
         itemStyle: { color, borderColor: surface, borderWidth: 2 },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: alpha(color, .32) }, { offset: 1, color: alpha(color, .02) }]) },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: alpha(color, .28) }, { offset: .7, color: alpha(color, .06) }, { offset: 1, color: alpha(color, 0) }]) },
         emphasis: { focus: 'series' },
         endLabel: directLabels ? { show: true, color: text, fontSize: 11, fontWeight: 600, distance: 6, formatter: (params: { value: number }) => format(Number(params.value) || 0) } : undefined,
         labelLayout: directLabels ? { moveOverlap: 'shiftY' } : undefined,

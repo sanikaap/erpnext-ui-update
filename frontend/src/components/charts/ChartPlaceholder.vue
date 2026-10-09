@@ -49,7 +49,7 @@ const bars = [38, 56, 44, 70, 52, 80, 62, 74, 48, 66, 58, 84];
 .ghost { position: absolute; inset: 8px 4px 4px; display: flex; align-items: flex-end; }
 .ghost svg { width: 100%; height: 75%; }
 .ghost-grid { stroke: var(--chart-grid); stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
-.ghost-line { fill: none; stroke: color-mix(in srgb, var(--chart-neutral) 55%, transparent); stroke-width: 2.5; stroke-dasharray: 6 6; vector-effect: non-scaling-stroke; }
+.ghost-line { fill: none; stroke: color-mix(in srgb, var(--chart-neutral) 55%, transparent); stroke-width: 2.5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .ghost-area { fill: var(--chart-track); opacity: .8; }
 .ghost-bars { display: flex; width: 100%; height: 75%; align-items: flex-end; gap: 2.5%; padding: 0 4%; }
 .ghost-bars i { flex: 1; border-radius: 4px 4px 0 0; background: var(--chart-track); }

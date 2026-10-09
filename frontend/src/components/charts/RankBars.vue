@@ -43,6 +43,6 @@ const share = (value: number) => `${Math.max(2, (value / max.value) * 100).toFix
 .rank-label { overflow: hidden; color: var(--foreground); font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .rank-value { flex: none; color: var(--foreground); font-size: 13px; font-weight: 600; }
 .rank-track { display: block; height: 6px; overflow: hidden; border-radius: 999px; background: var(--chart-track); }
-.rank-track i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, color-mix(in srgb, var(--bar) 70%, transparent), var(--bar)); transition: width var(--dur-med) var(--ease); }
+.rank-track i { display: block; height: 100%; border-radius: 999px; background: var(--bar); transition: width var(--dur-med) var(--ease); }
 .rank-sub { color: var(--subtle-foreground); font-size: 11.5px; }
 </style>
