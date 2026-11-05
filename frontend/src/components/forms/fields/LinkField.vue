@@ -21,6 +21,8 @@ const props = withDefaults(defineProps<{
   filters?: unknown;
   referenceDoctype?: string;
   inputId?: string;
+  /** Query from the form's scripts (frm.set_query), evaluated at search time against current values. */
+  searchArgs?: () => { filters?: unknown; query?: string } | undefined;
 }>(), { readOnly: false, invalid: false, compact: false });
 
 const emit = defineEmits<{ 'update:modelValue': [value: string]; select: [value: string] }>();
@@ -57,7 +59,8 @@ async function search(query: string) {
   loading.value = true;
   error.value = null;
   try {
-    const results = await documentApi.searchLink(props.doctype, query, { filters: props.filters, pageLength: 10, referenceDoctype: props.referenceDoctype });
+    const scripted = props.searchArgs?.();
+    const results = await documentApi.searchLink(props.doctype, query, { filters: scripted?.filters ?? props.filters, query: scripted?.query, pageLength: 10, referenceDoctype: props.referenceDoctype });
     if (current !== requestId) return;
     options.value = results;
     highlighted.value = 0;

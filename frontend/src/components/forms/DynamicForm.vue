@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { AlertCircle, ChevronDown, LayoutList, MoreHorizontal } from 'lucide-vue-next';
+import { computed, inject, nextTick, ref, watch } from 'vue';
+import { FORM_BINDING } from '@/desk/binding';
+import { AlertCircle, ChevronDown, LayoutList } from 'lucide-vue-next';
 import FieldRenderer from '@/components/forms/FieldRenderer.vue';
 import { buildLayout, evaluateCondition, fieldState, isTruthyValue, NO_VALUE_TYPES, TABLE_TYPES, type FormSectionLayout, type ValidationError } from '@/lib/doctype';
 import { applyFetchFrom } from '@/lib/fetch-from';
@@ -28,13 +29,16 @@ const props = withDefaults(defineProps<{
   errors?: ValidationError[];
   /** Tighter spacing, e.g. inside a drawer. */
   dense?: boolean;
-}>(), { childFields: () => ({}), readOnly: false, hideEmpty: false, errors: () => [], dense: false });
+  /** Tabs that aren't DocType fields (Connections); their content comes from the `tab-<key>` slot. */
+  extraTabs?: { key: string; label: string; count?: number | null }[];
+}>(), { childFields: () => ({}), readOnly: false, hideEmpty: false, errors: () => [], dense: false, extraTabs: () => [] });
+const binding = inject(FORM_BINDING, null);
 
 const emit = defineEmits<{ change: [field: ERPNextMetadataField, value: unknown] }>();
 const { user } = useCurrentUser();
 const expressionContext = computed(() => ({ user: user.value?.id }));
 
-const tabs = computed(() => buildLayout(props.fields, (field) => field.fieldtype !== 'Button'));
+const tabs = computed(() => buildLayout(props.fields));
 const activeTab = ref<string | null>(null);
 const expanded = ref<Set<string>>(new Set());
 
@@ -55,8 +59,8 @@ function shown(field: ERPNextMetadataField) {
   if (!state(field).visible) return false;
   if (props.hideEmpty && !NO_VALUE_TYPES.has(field.fieldtype)) return hasValue(field);
   if (props.hideEmpty && ['HTML', 'Heading', 'Image'].includes(field.fieldtype)) return false;
-  // HTML fields are usually placeholders that Desk form scripts fill; show only static content.
-  if (field.fieldtype === 'HTML' && !stripHtml(field.options)) return false;
+  // HTML fields are usually placeholders form scripts fill: show them once they have content.
+  if (field.fieldtype === 'HTML' && !stripHtml(field.options) && !binding?.htmlFilled[field.fieldname]) return false;
   return true;
 }
 
@@ -70,36 +74,17 @@ const visibleTabs = computed(() => tabs.value
   .map((tab) => ({ ...tab, sections: tab.sections.map((section) => ({ ...section, visible: visibleColumns(section) })).filter((section) => section.visible.length) }))
   .filter((tab) => tab.sections.length));
 
-const currentTab = computed(() => visibleTabs.value.find((tab) => tab.key === activeTab.value) ?? visibleTabs.value[0]);
+// Some DocTypes define their own "Connections" tab with fields in it: an extra tab with the
+// same label joins that tab (as Desk shows its dashboard there) rather than adding a second one.
+const sameLabel = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+const standaloneExtraTabs = computed(() => props.extraTabs.filter((extra) => !visibleTabs.value.some((tab) => sameLabel(tab.label, extra.label))));
+const activeExtraTab = computed(() => standaloneExtraTabs.value.find((tab) => tab.key === activeTab.value) ?? null);
+const mergedExtraCount = (label: string) => props.extraTabs.find((extra) => sameLabel(extra.label, label))?.count || null;
+const extraTabVisible = (extra: { key: string; label: string }) => extra.key === activeExtraTab.value?.key || Boolean(currentTab.value && sameLabel(currentTab.value.label, extra.label));
+const currentTab = computed(() => (activeExtraTab.value ? undefined : visibleTabs.value.find((tab) => tab.key === activeTab.value) ?? visibleTabs.value[0]));
 
-// More than five tabs: the first four stay inline, the rest move into a "More" menu.
-const MAX_INLINE_TABS = 5;
-const inlineTabs = computed(() => (visibleTabs.value.length > MAX_INLINE_TABS ? visibleTabs.value.slice(0, MAX_INLINE_TABS - 1) : visibleTabs.value));
-const overflowTabs = computed(() => (visibleTabs.value.length > MAX_INLINE_TABS ? visibleTabs.value.slice(MAX_INLINE_TABS - 1) : []));
-const activeOverflowTab = computed(() => overflowTabs.value.find((tab) => tab.key === currentTab.value?.key));
-const moreTabsOpen = ref(false);
-const moreButton = ref<HTMLButtonElement | null>(null);
-const moreMenu = ref<HTMLElement | null>(null);
-// The tab strip scrolls sideways (and clips), so the menu is fixed-positioned under its button.
-const menuPosition = ref({ top: 0, right: 0 });
-const closeMoreTabs = () => { moreTabsOpen.value = false; };
-async function toggleMoreTabs() {
-  if (moreTabsOpen.value) { closeMoreTabs(); return; }
-  const rect = moreButton.value?.getBoundingClientRect();
-  if (!rect) return;
-  menuPosition.value = { top: rect.bottom + 6, right: Math.max(8, window.innerWidth - rect.right) };
-  moreTabsOpen.value = true;
-  await nextTick();
-  moreMenu.value?.querySelector<HTMLButtonElement>('button')?.focus();
-}
-watch(moreTabsOpen, (open) => {
-  if (open) { window.addEventListener('scroll', closeMoreTabs, true); window.addEventListener('resize', closeMoreTabs); }
-  else { window.removeEventListener('scroll', closeMoreTabs, true); window.removeEventListener('resize', closeMoreTabs); }
-});
-onBeforeUnmount(closeMoreTabs);
 function pickTab(key: string) {
   activeTab.value = key;
-  if (moreTabsOpen.value) { closeMoreTabs(); moreButton.value?.focus(); }
 }
 
 function tabHasError(tab: (typeof visibleTabs.value)[number]) {
@@ -157,6 +142,8 @@ function toggleSection(section: FormSectionLayout) {
 function update(field: ERPNextMetadataField, value: unknown) {
   props.doc[field.fieldname] = value;
   emit('change', field, value);
+  // The form's scripts react to the change (frappe.ui.form.on handlers).
+  binding?.fieldChanged(field, props.doc, value);
 }
 
 function onLinkSelect(field: ERPNextMetadataField, value: string) {
@@ -168,7 +155,7 @@ function fieldId(field: ERPNextMetadataField) {
 }
 
 const inlineLabel = (field: ERPNextMetadataField) => field.fieldtype === 'Check';
-const noLabel = (field: ERPNextMetadataField) => ['Heading', 'HTML', 'Table', 'Image'].includes(field.fieldtype);
+const noLabel = (field: ERPNextMetadataField) => ['Heading', 'HTML', 'Table', 'Image', 'Button'].includes(field.fieldtype);
 const isWide = (field: ERPNextMetadataField) => TABLE_TYPES.has(field.fieldtype);
 
 /** Row count on a tab that is essentially one child table (e.g. "Items 3"); hidden when empty. */
@@ -191,14 +178,28 @@ function sectionTitle(section: (typeof visibleTabs.value)[number]['sections'][nu
   return !props.dense && index === 0 && currentTab.value === visibleTabs.value[0] && !tableOnly(section) ? `${props.doctype} details` : '';
 }
 
-defineExpose({ tabs: visibleTabs, activeTab });
+/** Desk's "Jump to field": opens the field's tab and section, then brings it into view. */
+async function jumpToField(fieldname: string) {
+  const tab = visibleTabs.value.find((candidate) => candidate.sections.some((section) => section.visible.flat().some((field) => field.fieldname === fieldname)));
+  if (!tab) return false;
+  activeTab.value = tab.key;
+  const section = tab.sections.find((candidate) => candidate.visible.flat().some((field) => field.fieldname === fieldname));
+  if (section && isCollapsed(section)) toggleSection(section);
+  await nextTick();
+  const element = document.querySelector<HTMLElement>(`.dynamic-form [data-fieldname="${fieldname}"]`);
+  element?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  element?.querySelector<HTMLElement>('input, select, textarea, button')?.focus({ preventScroll: true });
+  return true;
+}
+
+defineExpose({ tabs: visibleTabs, activeTab, jumpToField });
 </script>
 
 <template>
   <div :class="['dynamic-form', { 'dynamic-form--dense': dense }]">
-    <nav v-if="visibleTabs.length > 1" class="form-tabs" role="tablist" :aria-label="`${doctype} sections`">
+    <nav v-if="visibleTabs.length + standaloneExtraTabs.length > 1" class="form-tabs" role="tablist" :aria-label="`${doctype} sections`">
       <button
-        v-for="tab in inlineTabs"
+        v-for="tab in visibleTabs"
         :key="tab.key"
         type="button"
         role="tab"
@@ -206,44 +207,32 @@ defineExpose({ tabs: visibleTabs, activeTab });
         :class="['form-tab', { 'form-tab--active': tab.key === currentTab?.key }]"
         @click="pickTab(tab.key)"
       >
-        {{ tab.label }}<span v-if="tabCount(tab) !== null" class="form-tab-count tabular">{{ tabCount(tab) }}</span><span v-if="tabHasError(tab)" class="form-tab-error" aria-label="has errors" />
+        {{ tab.label }}<span v-if="(tabCount(tab) ?? mergedExtraCount(tab.label)) !== null" class="form-tab-count tabular">{{ tabCount(tab) ?? mergedExtraCount(tab.label) }}</span><span v-if="tabHasError(tab)" class="form-tab-error" aria-label="has errors" />
       </button>
-      <div v-if="overflowTabs.length" class="form-tab-more">
-        <button
-          ref="moreButton"
-          type="button"
-          :class="['form-tab', { 'form-tab--active': activeOverflowTab }]"
-          aria-haspopup="menu"
-          :aria-expanded="moreTabsOpen"
-          :aria-label="activeOverflowTab ? `More sections, showing ${activeOverflowTab.label}` : 'More sections'"
-          @click="toggleMoreTabs"
-        >
-          {{ activeOverflowTab?.label || 'More' }}<MoreHorizontal :size="14" /><span v-if="overflowTabs.some(tabHasError)" class="form-tab-error" aria-label="has errors" />
-        </button>
-      </div>
+      <button
+        v-for="tab in standaloneExtraTabs"
+        :key="tab.key"
+        type="button"
+        role="tab"
+        :aria-selected="tab.key === activeExtraTab?.key"
+        :class="['form-tab', { 'form-tab--active': tab.key === activeExtraTab?.key }]"
+        @click="pickTab(tab.key)"
+      >
+        {{ tab.label }}<span v-if="tab.count" class="form-tab-count tabular">{{ tab.count }}</span>
+      </button>
     </nav>
-    <Teleport to="body">
-      <div v-if="moreTabsOpen" class="form-tab-scrim" @click="closeMoreTabs" />
-      <Transition name="pop">
-        <div
-          v-if="moreTabsOpen"
-          ref="moreMenu"
-          class="menu-panel form-tab-menu"
-          role="menu"
-          :style="{ top: `${menuPosition.top}px`, right: `${menuPosition.right}px` }"
-          @keydown.esc="closeMoreTabs(); moreButton?.focus()"
-        >
-          <button v-for="tab in overflowTabs" :key="tab.key" type="button" role="menuitem" :class="{ active: tab.key === currentTab?.key }" @click="pickTab(tab.key)">
-            {{ tab.label }}<span v-if="tabHasError(tab)" class="form-tab-error" aria-label="has errors" />
-          </button>
-        </div>
-      </Transition>
-    </Teleport>
 
-    <div v-if="!visibleTabs.length" class="form-empty">{{ hideEmpty ? 'No values recorded yet.' : 'This DocType has no fields to show.' }}</div>
+    <!-- Stays mounted while hidden, so its tab can show a count before being opened. -->
+    <div v-for="tab in extraTabs" v-show="extraTabVisible(tab)" :key="tab.key" class="form-sections" role="tabpanel"><slot :name="`tab-${tab.key}`" /></div>
+
+    <div v-if="!visibleTabs.length && !activeExtraTab" class="form-empty">{{ hideEmpty ? 'No values recorded yet.' : 'This DocType has no fields to show.' }}</div>
 
     <div v-if="currentTab" class="form-sections" role="tabpanel">
-      <section v-for="(section, sectionIndex) in currentTab.sections" :key="section.key" :class="['form-section', { 'form-section--untitled': !sectionTitle(section, sectionIndex), 'form-section--table': tableOnly(section) && !section.collapsible }]">
+      <section
+        v-for="(section, sectionIndex) in currentTab.sections"
+        :key="section.key"
+        :class="['form-section', 'stagger-in', `delay-${Math.min(sectionIndex + 1, 4)}`, { 'form-section--untitled': !sectionTitle(section, sectionIndex), 'form-section--table': tableOnly(section) && !section.collapsible }]"
+      >
         <header v-if="sectionTitle(section, sectionIndex) && !(tableOnly(section) && !section.collapsible)" class="section-head">
           <button v-if="section.collapsible" type="button" class="section-toggle" :aria-expanded="!isCollapsed(section)" @click="toggleSection(section)">
             <span class="section-icon" aria-hidden="true"><LayoutList :size="15" /></span>
@@ -266,6 +255,7 @@ defineExpose({ tabs: visibleTabs, activeTab });
             <div
               v-for="field in column"
               :key="field.fieldname"
+              :data-fieldname="field.fieldname"
               :class="['form-field', `form-field--${field.fieldtype.toLowerCase().replace(/\s+/g, '-')}`, { 'form-field--wide': isWide(field), 'form-field--invalid': errorFields.has(field.fieldname), 'form-field--readonly': state(field).readOnly, 'form-field--bold': field.bold }]"
             >
               <label v-if="!inlineLabel(field) && !noLabel(field)" class="field-label" :for="fieldId(field)">
@@ -302,7 +292,7 @@ defineExpose({ tabs: visibleTabs, activeTab });
 .dynamic-form { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
 
 /* Tabs: an underlined strip on a white bar, sticky under the document header. */
-.form-tabs { position: sticky; z-index: 6; top: calc(var(--topbar-height) + var(--form-sticky-offset, 0px)); display: flex; gap: 4px; overflow-x: auto; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--surface) 96%, transparent); backdrop-filter: blur(8px); box-shadow: var(--shadow-sm); scrollbar-width: none; }
+.form-tabs { position: sticky; z-index: 6; top: calc(var(--topbar-height) + var(--form-sticky-offset, 0px)); display: flex; flex-wrap: wrap; gap: 0 4px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--surface) 96%, transparent); backdrop-filter: blur(8px); box-shadow: var(--shadow-sm); scrollbar-width: none; }
 .dynamic-form--dense .form-tabs { position: static; }
 .form-tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: 7px; height: 48px; padding: 0 12px; color: var(--muted-foreground); border: 0; border-radius: 0; background: none; font-size: 13.5px; font-weight: 500; white-space: nowrap; transition: color var(--dur-fast) var(--ease); }
 .form-tab::after { position: absolute; right: 10px; bottom: 0; left: 10px; height: 2px; content: ''; border-radius: 2px 2px 0 0; background: transparent; transition: background-color var(--dur-fast) var(--ease); }
@@ -314,18 +304,15 @@ defineExpose({ tabs: visibleTabs, activeTab });
 .form-tab-count { min-width: 20px; padding: 0 6px; color: var(--muted-foreground); border-radius: 999px; background: var(--muted); font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
 .form-tab--active .form-tab-count { color: var(--primary-soft-foreground); background: var(--primary-soft); }
 .form-tab-error { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }
-.form-tab-more { position: relative; flex: none; }
-.form-tab-more svg { color: var(--icon-foreground); }
-.form-tab-scrim { position: fixed; z-index: 29; inset: 0; }
-.form-tab-menu { position: fixed; z-index: 30; max-width: calc(100vw - 16px); }
 .form-tab-menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 34px; padding: 0 10px; color: var(--foreground); border: 0; border-radius: var(--radius-md); background: none; font-size: 13px; text-align: left; }
 .form-tab-menu button:hover { background: var(--muted); }
 .form-tab-menu button:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
 .form-tab-menu button.active { color: var(--primary-soft-foreground); background: var(--primary-soft); font-weight: 600; }
 
-/* Sections: white cards with an icon heading. */
+/* Sections: white cards with an icon heading, topped with a thin kind-neutral accent. */
 .form-sections { display: flex; flex-direction: column; gap: 16px; }
-.form-section { padding: 20px 22px 22px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-md); }
+.form-section { position: relative; padding: 20px 22px 22px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-md); }
+.dynamic-form:not(.dynamic-form--dense) .form-section::before { position: absolute; top: 1px; right: 1px; left: 1px; height: 3px; content: ''; border-radius: calc(var(--radius-xl) - 1px) calc(var(--radius-xl) - 1px) 0 0; background: linear-gradient(90deg, var(--primary), var(--secondary)); opacity: .85; pointer-events: none; }
 .form-section--table { padding: 0; overflow: hidden; }
 .dynamic-form--dense .form-section { padding: 0 0 18px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; background: none; overflow: visible; }
 .dynamic-form--dense .form-section:last-child { border-bottom: 0; }
@@ -350,7 +337,15 @@ defineExpose({ tabs: visibleTabs, activeTab });
 /* Fields */
 .section-grid { display: grid; grid-template-columns: repeat(var(--form-columns, 1), minmax(0, 1fr)); gap: 0 24px; }
 .section-column { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
+/* A faint rule at the midpoint of the column gap — columns read as grouped, not just wrapped. */
+.section-column:not(:first-child) { position: relative; }
+.section-column:not(:first-child)::before { position: absolute; top: 0; bottom: 0; left: -12px; width: 1px; content: ''; background: var(--border); }
 .form-field { display: flex; min-width: 0; flex-direction: column; gap: 6px; }
+/* Hovering or editing a field lifts it slightly from the page so the active row is unambiguous. */
+.form-field:not(.form-field--wide) { padding: 5px 8px; margin: -5px -8px; border-radius: var(--radius-md); transition: background-color var(--dur-fast) var(--ease); }
+.form-field:not(.form-field--wide):hover { background: var(--surface-tint); }
+.form-field:not(.form-field--wide):focus-within { background: color-mix(in srgb, var(--primary) 6%, transparent); }
+.dynamic-form :deep(.control:focus):not(.control--invalid), .dynamic-form :deep(.control:focus-within):not(.control--invalid) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent); }
 .field-label { display: flex; align-items: baseline; gap: 2px; color: var(--foreground); font-size: 12.5px; font-weight: 500; }
 .form-field--readonly .field-label { color: var(--muted-foreground); }
 .form-field:focus-within .field-label { color: var(--primary-soft-foreground); }

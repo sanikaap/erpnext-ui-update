@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { CornerDownLeft, Database, FileText, LoaderCircle, Plus, Search } from 'lucide-vue-next';
+import { ArrowLeftRight, CornerDownLeft, Database, FileText, LoaderCircle, Plus, Search } from 'lucide-vue-next';
 import { allNavigation } from '@/config/navigation';
 import { moduleRegistry } from '@/app/module-registry';
 import { isStaticDocType, staticGlobalSearch } from '@/services/static-data';
 import { useNavigation } from '@/composables/useNavigation';
+import { appOptions, selectApp, selectedApp } from '@/app/app-context';
 import { erpnextApi } from '@/services/erpnext-api';
 import { documentApi } from '@/services/document-api';
 import type { Component } from 'vue';
@@ -49,6 +50,8 @@ const pages = computed<Entry[]>(() => {
       const match = !text || entry.label.toLowerCase().includes(text) || group?.label.toLowerCase().includes(text) || entry.doctype?.toLowerCase().includes(text);
       const key = `${group?.label}:${entry.label}`;
       if (!match || seen.has(key) || !isAvailable(entry)) return false;
+      // Only pages of the app chosen after sign-in.
+      if (selectedApp.value && group && group.workspace !== selectedApp.value.workspace) return false;
       seen.add(key);
       return true;
     })
@@ -83,7 +86,19 @@ const recordEntries = computed<Entry[]>(() => records.value.map((record) => ({
   run: () => void router.push({ name: 'document-detail', params: { doctype: record.doctype, name: record.name } }),
 })));
 
-const entries = computed(() => [...creates.value, ...pages.value, ...doctypeEntries.value, ...recordEntries.value]);
+// Switch between ERPNext and NGO, or go back to the workspace chooser.
+const workspaceEntries = computed<Entry[]>(() => {
+  const text = query.value.trim().toLowerCase();
+  if (!text) return [];
+  const wantsSwitch = ['switch', 'workspace', 'app'].some((word) => word.startsWith(text) || text.startsWith(word));
+  const switches = appOptions
+    .filter((option) => option.key !== selectedApp.value?.key && (wantsSwitch || option.label.toLowerCase().startsWith(text)))
+    .map((option) => ({ key: `ws-${option.key}`, section: 'Workspace', label: `Switch to ${option.label}`, hint: option.description, icon: ArrowLeftRight, run: () => { selectApp(option.key); void router.push(option.home); } }));
+  const back = wantsSwitch ? [{ key: 'ws-all', section: 'Workspace', label: 'Back to workspaces', hint: 'Choose an app', icon: ArrowLeftRight, run: () => void router.push({ name: 'select-app' }) }] : [];
+  return [...switches, ...back];
+});
+
+const entries = computed(() => [...creates.value, ...workspaceEntries.value, ...pages.value, ...doctypeEntries.value, ...recordEntries.value]);
 const sections = computed(() => {
   const result: { title: string; items: { entry: Entry; index: number }[] }[] = [];
   entries.value.forEach((entry, index) => {

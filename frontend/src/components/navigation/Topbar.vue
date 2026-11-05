@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { Building2, ChevronDown, LogOut, Menu, Monitor, Moon, Search, SlidersHorizontal, Sun, UserRound } from 'lucide-vue-next';
+import { ArrowLeftRight, Building2, ChevronDown, LogOut, Menu, Monitor, Moon, Search, SlidersHorizontal, Sun, UserRound } from 'lucide-vue-next';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import AppPopover from '@/components/overlays/AppPopover.vue';
 import CommandPalette from '@/components/navigation/CommandPalette.vue';
@@ -10,6 +10,7 @@ import { useCurrentUser } from '@/composables/useCurrentUser';
 import { useSessionDefaults } from '@/composables/useSessionDefaults';
 import { authApi } from '@/services/auth-api';
 import { markLoggedOut } from '@/router/auth-guard';
+import { clearSelectedApp, selectedApp } from '@/app/app-context';
 import { fileApi } from '@/services/file-api';
 import { useLayoutStore } from '@/stores/layout';
 import { shortcutLabel } from '@/lib/utils';
@@ -43,6 +44,7 @@ const themeIcon = computed(() => (theme.preference === 'system' ? Monitor : them
 async function logout() {
   try { await authApi.logout(); } catch { /* the session may already be gone */ }
   markLoggedOut();
+  clearSelectedApp();
   await router.replace({ name: 'login' });
 }
 </script>
@@ -82,6 +84,7 @@ async function logout() {
             <button v-for="option in (['light', 'dark', 'system'] as const)" :key="option" type="button" role="radio" :aria-checked="theme.preference === option" :class="{ selected: theme.preference === option }" @click="theme.setTheme(option)">{{ option }}</button>
           </div>
           <div class="menu-separator" role="separator" />
+          <RouterLink :to="{ name: 'select-app' }" class="menu-item" data-testid="link-switch-app" @click="close()"><ArrowLeftRight :size="14" />Switch app<small v-if="selectedApp" class="menu-current-app">{{ selectedApp.label }}</small></RouterLink>
           <button type="button" class="menu-item menu-item--danger" @click="close(); logout()"><LogOut :size="14" />Log out</button>
         </template>
       </AppPopover>

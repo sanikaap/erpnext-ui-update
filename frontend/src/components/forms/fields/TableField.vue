@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { ArrowDown, ArrowUp, Copy, Maximize2, Plus, Rows3, Trash2 } from 'lucide-vue-next';
+import { computed, inject, onMounted, ref } from 'vue';
+import { FORM_BINDING } from '@/desk/binding';
+import { ArrowDown, ArrowUp, Copy, Download, Maximize2, Plus, Rows3, Trash2, Upload } from 'lucide-vue-next';
 import FieldRenderer from '@/components/forms/FieldRenderer.vue';
 import DynamicForm from '@/components/forms/DynamicForm.vue';
 import AppDrawer from '@/components/overlays/AppDrawer.vue';
@@ -28,9 +29,16 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [rows: Record<string, unknown>[]] }>();
 const { context } = useSessionDefaults();
+const binding = inject(FORM_BINDING, null);
+const flags = computed(() => binding?.gridFlags(props.field.fieldname) ?? { cannotAdd: false, cannotDelete: false });
+// Submitted documents keep their rows; only "Allow on Submit" cells stay editable.
+const rowsLocked = computed(() => props.readOnly || Number(props.parentDoc?.docstatus ?? 0) > 0);
+const canAdd = computed(() => !rowsLocked.value && !flags.value.cannotAdd);
+const canDelete = computed(() => !rowsLocked.value && !flags.value.cannotDelete);
+onMounted(() => binding?.registerGrid(props.field.fieldname, () => rows.value.filter((row, index) => selected.value.has(rowKey(row, index))).map((row, index) => String(row.name ?? rowKey(row, index)))));
 
 const rows = computed(() => props.modelValue ?? []);
-const columns = computed(() => listViewFields(props.childFields, { limit: 6 }));
+const columns = computed(() => listViewFields(props.childFields, { limit: 8 }));
 const selected = ref<Set<unknown>>(new Set());
 const editingIndex = ref<number | null>(null);
 const editingRow = computed(() => (editingIndex.value === null ? null : rows.value[editingIndex.value] ?? null));
@@ -52,24 +60,83 @@ function renumber(list: Record<string, unknown>[]) {
   return list;
 }
 
+/** Desk's Insert Above / Insert Below: a new row at a position, keeping the rest in order. */
+function insertRow(at: number) {
+  addRow();
+  void Promise.resolve().then(() => {
+    const next = [...props.modelValue];
+    const [added] = next.splice(next.length - 1, 1);
+    next.splice(at, 0, added);
+    emit('update:modelValue', renumber(next));
+    editingIndex.value = at;
+  });
+}
+
+// Desk's Download / Upload, offered on tables marked "Allow Bulk Edit".
+const bulkEdit = computed(() => Boolean((props.field as { allow_bulk_edit?: number }).allow_bulk_edit));
+const bulkColumns = computed(() => props.childFields.filter((column) => !column.hidden && !column.read_only && !['Section Break', 'Column Break', 'Tab Break', 'Fold', 'HTML', 'Button', 'Heading', 'Table', 'Table MultiSelect'].includes(column.fieldtype)));
+const csvCell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+function downloadRows() {
+  const lines = [bulkColumns.value.map((column) => csvCell(column.label)).join(','), ...rows.value.map((row) => bulkColumns.value.map((column) => csvCell(row[column.fieldname])).join(','))];
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+  link.download = `${props.field.options ?? props.field.fieldname}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+function parseCsv(text: string) {
+  const table: string[][] = [[]];
+  let cell = ''; let quoted = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (quoted) {
+      if (char === '"' && text[i + 1] === '"') { cell += '"'; i += 1; } else if (char === '"') quoted = false; else cell += char;
+    } else if (char === '"') quoted = true;
+    else if (char === ',') { table[table.length - 1].push(cell); cell = ''; } else if (char === '\n') { table[table.length - 1].push(cell); cell = ''; table.push([]); } else if (char !== '\r') cell += char;
+  }
+  table[table.length - 1].push(cell);
+  return table.filter((line) => line.some(Boolean));
+}
+const uploadInput = ref<HTMLInputElement | null>(null);
+async function uploadRows(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  const [header, ...lines] = parseCsv(await file.text());
+  if (!header) return;
+  const fieldnames = header.map((label) => bulkColumns.value.find((column) => column.label === label.trim() || column.fieldname === label.trim())?.fieldname);
+  const start = rows.value.length;
+  lines.forEach(() => addRow());
+  await Promise.resolve();
+  lines.forEach((line, offset) => {
+    const row = props.modelValue[start + offset];
+    if (row) fieldnames.forEach((fieldname, column) => { if (fieldname && line[column] !== undefined && line[column] !== '') row[fieldname] = line[column]; });
+  });
+}
+
 function addRow() {
   if (!props.field.options) return;
   const row = newChildRow(props.field.options, props.childFields, { doctype: props.parentDoctype || '', fieldname: props.field.fieldname, idx: rows.value.length + 1 }, context());
+  row.parent = props.parentDoc?.name;
   emit('update:modelValue', renumber([...rows.value, row]));
   // Rows are reactive once inside the parent document, so resolve ":Company"-style defaults on that copy.
   void Promise.resolve().then(() => {
     const added = props.modelValue[props.modelValue.length - 1];
-    if (added) void applyDynamicDefaults(added, props.childFields, props.parentDoc);
+    if (!added) return;
+    void applyDynamicDefaults(added, props.childFields, props.parentDoc);
+    binding?.rowAdded(props.field, added);
   });
 }
 
 function duplicateRow(index: number) {
   const source = rows.value[index];
-  const copy: Record<string, unknown> = { ...source, __islocal: 1, __key: `copy-${Date.now().toString(36)}-${index}` };
-  delete copy.name;
+  const key = `copy-${Date.now().toString(36)}-${index}`;
+  const copy: Record<string, unknown> = { ...source, __islocal: 1, __key: key, name: `new-${String(source.doctype ?? 'row').toLowerCase().replace(/ /g, '-')}-${key}` };
   const next = [...rows.value];
   next.splice(index + 1, 0, copy);
   emit('update:modelValue', renumber(next));
+  void Promise.resolve().then(() => binding?.rowAdded(props.field, props.modelValue[index + 1]));
 }
 
 function moveRow(index: number, delta: number) {
@@ -78,11 +145,14 @@ function moveRow(index: number, delta: number) {
   const next = [...rows.value];
   [next[index], next[target]] = [next[target], next[index]];
   emit('update:modelValue', renumber(next));
+  binding?.rowMoved(props.field);
 }
 
 function deleteRows(indexes: number[]) {
   const drop = new Set(indexes);
+  const removed = rows.value.filter((_, index) => drop.has(index));
   emit('update:modelValue', renumber(rows.value.filter((_, index) => !drop.has(index))));
+  binding?.rowsRemoved(props.field, removed);
   selected.value = new Set();
   if (editingIndex.value !== null && drop.has(editingIndex.value)) editingIndex.value = null;
 }
@@ -105,6 +175,7 @@ function toggleAll() {
 
 function setCell(row: Record<string, unknown>, column: ERPNextMetadataField, value: unknown) {
   row[column.fieldname] = value;
+  binding?.fieldChanged(column, row, value);
 }
 
 function onLinkSelect(row: Record<string, unknown>, column: ERPNextMetadataField, value: string) {
@@ -127,9 +198,12 @@ const hasTotals = computed(() => Object.keys(totals.value).length > 0 && rows.va
   <div :class="['grid-field', { 'grid-field--readonly': readOnly }]">
     <div class="grid-head">
       <div class="grid-title"><span class="grid-title-icon" aria-hidden="true"><Rows3 :size="15" /></span><span>{{ field.label }}</span><span class="grid-count tabular">{{ rows.length }} {{ rows.length === 1 ? 'row' : 'rows' }}</span></div>
-      <div v-if="!readOnly" class="grid-actions">
-        <BaseButton v-if="selected.size" variant="danger" size="sm" @click="deleteSelected"><Trash2 :size="13" />Delete {{ selected.size }}</BaseButton>
-        <BaseButton variant="primary" size="sm" @click="addRow"><Plus :size="14" />Add row</BaseButton>
+      <div v-if="canAdd || canDelete || bulkEdit" class="grid-actions">
+        <BaseButton v-if="selected.size && canDelete" variant="danger" size="sm" @click="deleteSelected"><Trash2 :size="13" />Delete {{ selected.size }}</BaseButton>
+        <BaseButton v-if="bulkEdit" variant="quiet" size="sm" @click="downloadRows"><Download :size="13" />Download</BaseButton>
+        <BaseButton v-if="bulkEdit && canAdd" variant="quiet" size="sm" @click="uploadInput?.click()"><Upload :size="13" />Upload</BaseButton>
+        <input v-if="bulkEdit && canAdd" ref="uploadInput" type="file" accept=".csv,text/csv" hidden @change="uploadRows" />
+        <BaseButton v-if="canAdd" variant="primary" size="sm" @click="addRow"><Plus :size="14" />Add row</BaseButton>
       </div>
     </div>
 
@@ -138,7 +212,7 @@ const hasTotals = computed(() => Object.keys(totals.value).length > 0 && rows.va
       <table class="grid-table">
         <thead>
           <tr>
-            <th v-if="!readOnly" class="grid-select"><input type="checkbox" :checked="allSelected" :aria-label="`Select all ${field.label} rows`" :disabled="!rows.length" @change="toggleAll" /></th>
+            <th v-if="!props.readOnly" class="grid-select"><input type="checkbox" :checked="allSelected" :aria-label="`Select all ${field.label} rows`" :disabled="!rows.length" @change="toggleAll" /></th>
             <th class="grid-idx">#</th>
             <th v-for="column in columns" :key="column.fieldname" :class="{ 'grid-num': NUMERIC_TYPES.has(column.fieldtype), 'grid-check': column.fieldtype === 'Check' }">
               {{ column.label }}<b v-if="column.reqd && !readOnly" class="grid-req">*</b>
@@ -149,7 +223,7 @@ const hasTotals = computed(() => Object.keys(totals.value).length > 0 && rows.va
         <tbody>
           <tr v-if="!rows.length">
             <td :colspan="columns.length + (readOnly ? 2 : 3)" class="grid-none">
-              No {{ field.label.toLowerCase() }} yet<template v-if="!readOnly"> · <button type="button" class="grid-inline-add" @click="addRow">Add the first row</button></template>
+              No {{ field.label.toLowerCase() }} yet<template v-if="canAdd"> · <button type="button" class="grid-inline-add" @click="addRow">Add the first row</button></template>
             </td>
           </tr>
           <tr v-for="(row, index) in rows" :key="rowKey(row, index)" :class="{ 'grid-row--selected': selected.has(rowKey(row, index)), 'grid-row--error': rowsWithErrors.has(index + 1) }">
@@ -177,10 +251,8 @@ const hasTotals = computed(() => Object.keys(totals.value).length > 0 && rows.va
             </td>
             <td class="grid-row-actions">
               <button type="button" class="grid-icon" :aria-label="`Open row ${index + 1}`" title="Edit full row" @click="editingIndex = index"><Maximize2 :size="13" /></button>
-              <template v-if="!readOnly">
-                <button type="button" class="grid-icon" :aria-label="`Duplicate row ${index + 1}`" title="Duplicate" @click="duplicateRow(index)"><Copy :size="13" /></button>
-                <button type="button" class="grid-icon grid-icon--danger" :aria-label="`Delete row ${index + 1}`" title="Delete" @click="deleteRows([index])"><Trash2 :size="13" /></button>
-              </template>
+              <button v-if="canAdd" type="button" class="grid-icon" :aria-label="`Duplicate row ${index + 1}`" title="Duplicate" @click="duplicateRow(index)"><Copy :size="13" /></button>
+              <button v-if="canDelete" type="button" class="grid-icon grid-icon--danger" :aria-label="`Delete row ${index + 1}`" title="Delete" @click="deleteRows([index])"><Trash2 :size="13" /></button>
             </td>
           </tr>
         </tbody>
@@ -221,7 +293,9 @@ const hasTotals = computed(() => Object.keys(totals.value).length > 0 && rows.va
         dense
       />
       <template v-if="!readOnly && editingIndex !== null" #footer>
-        <BaseButton variant="danger" size="sm" @click="deleteRows([editingIndex])"><Trash2 :size="14" />Delete row</BaseButton>
+        <BaseButton v-if="canDelete" variant="danger" size="sm" @click="deleteRows([editingIndex])"><Trash2 :size="14" />Delete row</BaseButton>
+        <BaseButton v-if="canAdd" variant="quiet" size="sm" @click="insertRow(editingIndex)">Insert Above</BaseButton>
+        <BaseButton v-if="canAdd" variant="quiet" size="sm" @click="insertRow(editingIndex + 1)">Insert Below</BaseButton>
         <BaseButton variant="primary" size="sm" @click="editingIndex = null">Done</BaseButton>
       </template>
     </AppDrawer>
@@ -238,6 +312,8 @@ const hasTotals = computed(() => Object.keys(totals.value).length > 0 && rows.va
 .grid-count { padding: 1px 8px; color: var(--muted-foreground); border-radius: 999px; background: var(--muted); font-size: 11.5px; font-weight: 500; }
 .grid-actions { display: flex; gap: 6px; }
 .grid-scroll { overflow-x: auto; }
+.grid-row-actions { position: sticky; z-index: 1; right: 0; background: var(--surface); }
+.grid-table th.grid-row-actions { background: var(--surface-2); }
 .grid-table { width: 100%; min-width: 640px; border-collapse: separate; border-spacing: 0; font-size: 13px; }
 .grid-table th { height: 38px; padding: 0 8px; color: var(--subtle-foreground); border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 11.5px; font-weight: 600; text-align: left; white-space: nowrap; }
 .grid-table td { height: 46px; padding: 3px 4px; color: var(--foreground); border-bottom: 1px solid var(--border); vertical-align: middle; }

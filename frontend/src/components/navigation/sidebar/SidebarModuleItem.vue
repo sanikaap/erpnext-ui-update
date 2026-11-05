@@ -31,7 +31,7 @@ const emit = defineEmits<{ select: [] }>();
 .module-chevron { flex: none; color: var(--nav-subtle); opacity: 0; transition: opacity .12s, transform .15s var(--ease); }
 .module-item:hover .module-chevron, .module-item.open .module-chevron { opacity: 1; }
 .module-item.open:not(.compact) { color: var(--nav-fg); background: var(--nav-hover); }
-.module-item.open .module-chevron { transform: rotate(0); color: var(--nav-accent); }
+.module-item.open .module-chevron { transform: rotate(0); color: var(--nav-fg); }
 .module-item:hover .module-chevron { transform: translateX(2px); }
 .module-item.active { color: var(--nav-active-fg); background: var(--nav-active-bg); font-weight: 600; }
 .module-item.active::before { position: absolute; top: 10px; bottom: 10px; left: 0; width: 3px; content: ''; border-radius: 0 3px 3px 0; background: var(--nav-accent); }

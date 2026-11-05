@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, inject, onMounted, ref } from 'vue';
 import { Check, Mail, Phone, Star } from 'lucide-vue-next';
+import { FORM_BINDING } from '@/desk/binding';
 import LinkField from '@/components/forms/fields/LinkField.vue';
 import AttachField from '@/components/forms/fields/AttachField.vue';
 import TextEditorField from '@/components/forms/fields/TextEditorField.vue';
@@ -37,12 +38,23 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ 'update:modelValue': [value: unknown]; linkSelect: [value: string] }>();
 
 const type = computed(() => props.field.fieldtype);
+const binding = inject(FORM_BINDING, null);
+const linkSearchArgs = () => binding?.linkArgs(props.field, props.doc);
+
+// HTML fields: scripts write into a real element (frm.fields_dict.x.$wrapper), mounted here.
+const htmlHost = ref<HTMLElement | null>(null);
+onMounted(() => {
+  if (type.value !== 'HTML') return;
+  const element = binding?.htmlWrapper(props.field.fieldname);
+  if (element && htmlHost.value) htmlHost.value.append(element);
+});
+const buttonVariant = computed(() => (props.field.primary ? 'fr-button fr-button--primary' : 'fr-button'));
 const NUMERIC = new Set(['Int', 'Float', 'Currency', 'Percent']);
 const MULTILINE = new Set(['Text', 'Small Text', 'Long Text', 'Code', 'JSON', 'HTML Editor', 'Markdown Editor']);
 const KNOWN = new Set([
   'Data', 'Link', 'Dynamic Link', 'Select', 'Autocomplete', 'Check', 'Int', 'Float', 'Currency', 'Percent', 'Date', 'Datetime', 'Time',
   'Text', 'Small Text', 'Long Text', 'Code', 'JSON', 'HTML Editor', 'Markdown Editor', 'Text Editor', 'Password', 'Read Only',
-  'Attach', 'Attach Image', 'Image', 'HTML', 'Heading', 'Phone', 'Table', 'Table MultiSelect', 'Rating', 'Color', 'Duration', 'Icon', 'Barcode',
+  'Attach', 'Attach Image', 'Image', 'HTML', 'Heading', 'Phone', 'Table', 'Table MultiSelect', 'Rating', 'Color', 'Duration', 'Icon', 'Barcode', 'Button',
 ]);
 
 const linkDoctype = computed(() => {
@@ -63,6 +75,12 @@ const stringValue = computed(() => {
 
 const checked = computed(() => props.modelValue === true || Number(props.modelValue) === 1);
 const options = computed(() => selectOptions(props.field));
+/** Scripted options may carry a label separate from the stored value. */
+function optionLabel(option: string) {
+  const raw: unknown = props.field.options;
+  const match = Array.isArray(raw) ? raw.find((entry) => entry && typeof entry === 'object' && (entry as { value?: unknown }).value === option) : undefined;
+  return (match as { label?: string } | undefined)?.label ?? option;
+}
 const currency = computed(() => currencyFor(props.field, props.doc, props.parent));
 const display = computed(() => formatValue(props.modelValue, props.field, props.doc, props.parent));
 const dataKind = computed(() => (type.value === 'Phone' ? 'Phone' : type.value === 'Data' ? props.field.options || '' : ''));
@@ -139,7 +157,11 @@ function onJsonInput(value: string) {
 
   <!-- Decorative / structural -->
   <h4 v-else-if="type === 'Heading'" class="fr-heading">{{ field.label }}</h4>
-  <div v-else-if="type === 'HTML'" class="fr-html" v-html="sanitizeHtml(field.options)" />
+  <div v-else-if="type === 'HTML'" class="fr-html">
+    <div v-if="field.options && field.options.trim()" v-html="sanitizeHtml(field.options)" />
+    <div ref="htmlHost" />
+  </div>
+  <button v-else-if="type === 'Button'" :id="inputId" type="button" :class="buttonVariant" :disabled="Boolean(field.read_only)" @click="binding?.fieldClicked(field, doc)">{{ field.label }}</button>
   <div v-else-if="type === 'Image'" class="fr-image">
     <img v-if="imageSrc" :src="imageSrc" :alt="field.label" loading="lazy" /><span v-else class="fr-empty">No image</span>
   </div>
@@ -154,6 +176,7 @@ function onJsonInput(value: string) {
     :compact="compact"
     :reference-doctype="doctype"
     :input-id="inputId"
+    :search-args="linkSearchArgs"
     :placeholder="type === 'Dynamic Link' && !linkDoctype ? `Choose ${field.options} first` : undefined"
     @update:model-value="update"
     @select="emit('linkSelect', $event)"
@@ -199,7 +222,7 @@ function onJsonInput(value: string) {
   <div v-else-if="type === 'Select'" :class="['fr-select', { 'fr-select--compact': compact }]">
     <select :id="inputId" :class="['control', { 'control--invalid': invalid }]" :value="stringValue" @change="update(($event.target as HTMLSelectElement).value)">
       <option v-if="!options.includes('')" value="">{{ compact ? '' : `Select ${field.label.toLowerCase()}…` }}</option>
-      <option v-for="option in options" :key="option" :value="option">{{ option || (compact ? '' : `Select ${field.label.toLowerCase()}…`) }}</option>
+      <option v-for="option in options" :key="option" :value="option">{{ optionLabel(option) || (compact ? '' : `Select ${field.label.toLowerCase()}…`) }}</option>
     </select>
   </div>
 
@@ -298,6 +321,12 @@ function onJsonInput(value: string) {
 
 .fr-heading { padding-top: 6px; color: var(--foreground); font-size: 13.5px; font-weight: 600; }
 .fr-html { color: var(--muted-foreground); font-size: 13px; }
+.fr-button { align-self: flex-start; height: 34px; padding: 0 14px; color: var(--foreground); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface); font-size: 13px; font-weight: 500; transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+.fr-button:hover:not(:disabled) { border-color: var(--primary); background: var(--primary-softer); }
+.fr-button:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.fr-button:disabled { cursor: not-allowed; opacity: .6; }
+.fr-button--primary { color: var(--primary-foreground); border-color: var(--primary); background: var(--primary); }
+.fr-button--primary:hover:not(:disabled) { background: var(--primary); opacity: .92; }
 .fr-image img { max-width: 160px; max-height: 160px; border: 1px solid var(--border); border-radius: var(--radius-lg); object-fit: cover; }
 
 .fr-rating { display: inline-flex; align-items: center; gap: 2px; color: var(--border-strong); }

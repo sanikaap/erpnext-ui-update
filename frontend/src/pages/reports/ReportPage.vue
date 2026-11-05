@@ -58,6 +58,14 @@ async function load() {
     for (const filter of filters.value) {
       if (filter.default !== undefined) values[filter.fieldname] = filter.filterType === 'MultiSelectList' && Array.isArray(filter.default) ? filter.default[0] : filter.default;
     }
+    // Filters passed in the URL, e.g. a voucher's "Accounting Ledger" button (frappe.route_options).
+    for (const filter of filters.value) {
+      const raw = route.query[filter.fieldname];
+      if (typeof raw !== 'string' || raw === '') continue;
+      let value: unknown = raw === 'true' ? 1 : raw === 'false' ? 0 : raw;
+      if (raw.startsWith('[')) { try { const list = JSON.parse(raw); value = Array.isArray(list) ? list[0] : raw; } catch { /* a literal value */ } }
+      values[filter.fieldname] = value;
+    }
     // Run straight away when nothing required is missing, as Desk does.
     if (!missing.value.length) await run();
   } catch (cause) {

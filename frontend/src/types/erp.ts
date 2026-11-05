@@ -71,6 +71,13 @@ export interface ERPNextMetadataField {
   length?: number;
   /** Frappe permission level; fields above 0 need extra role rights. */
   permlevel?: number;
+  allow_on_submit?: number | boolean;
+  no_copy?: number | boolean;
+  link_filters?: string;
+  /** Set by form scripts through frm.set_query. */
+  get_query?: unknown;
+  /** Any other DocField property; form scripts read and set them directly. */
+  [key: string]: unknown;
   /** Child DocType for Table / Table MultiSelect fields. */
   link_target?: string;
   is_table?: boolean;
@@ -115,6 +122,8 @@ export interface Sort {
 
 /** A fieldtype-aware condition on a DocType field, in Frappe's filter-tuple form. */
 export interface Filter {
+  /** Set when the field lives on a child table of the listed DocType. */
+  doctype?: string;
   fieldname: string;
   operator: string;
   value: unknown;

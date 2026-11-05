@@ -8,9 +8,11 @@ import ProfilePage from '@/pages/ProfilePage.vue';
 import ModuleReportsPage from '@/pages/reports/ModuleReportsPage.vue';
 import ReportPage from '@/pages/reports/ReportPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
+import AppSelectPage from '@/pages/AppSelectPage.vue';
 import { authGuard } from '@/router/auth-guard';
 import { documentConfigs, legacyRedirects } from '@/config/navigation';
 import { moduleRegistry } from '@/app/module-registry';
+import { bindDeskRouter } from '@/desk/runtime';
 
 const moduleRoutes = moduleRegistry.flatMap((module) => [
   { path: module.route, component: ModulePage, meta: { moduleKey: module.key } },
@@ -40,6 +42,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { name: 'login', path: '/login', component: LoginPage, meta: { public: true } },
+    { name: 'select-app', path: '/select-app', component: AppSelectPage, meta: { bare: true } },
     { path: '/', component: DashboardPage },
     ...redirects,
     ...moduleRoutes,
@@ -63,5 +66,6 @@ const router = createRouter({
 });
 
 router.beforeEach(authGuard);
+bindDeskRouter(router);
 
 export default router;

@@ -3,9 +3,11 @@ import { ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { BookOpen, LayoutDashboard, PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next';
 import SidebarModuleItem from './SidebarModuleItem.vue';
+import WorkspaceSwitcher from './WorkspaceSwitcher.vue';
 import { utilityNavigation } from '@/config/navigation';
 import type { VisibleModule } from '@/composables/useNavigation';
 import { useCompanyBrand } from '@/composables/useCompanyBrand';
+import { appHome, selectedApp } from '@/app/app-context';
 
 /**
  * Level 1: modules grouped by workspace. Full width with labels, or an icon
@@ -46,7 +48,7 @@ watch(() => route.fullPath, hideTip);
 <template>
   <div :class="['level-one', { compact }]">
     <div class="brand-row">
-      <RouterLink to="/" class="brand" :aria-label="`${companyName} home`" :title="companyName" @click="emit('navigate')">
+      <RouterLink :to="appHome" class="brand" :aria-label="`${companyName} home`" :title="companyName" @click="emit('navigate')">
         <span v-if="companyLogo && !logoFailed" class="brand-logo" aria-hidden="true"><img :src="companyLogo" alt="" @error="logoFailed = true" /></span>
         <span v-else class="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 32 32" width="20" height="20" fill="none">
@@ -54,7 +56,7 @@ watch(() => route.fullPath, hideTip);
             <path d="M16 11.5 21 14.5v5.5L16 23l-5-3v-5.5l5-3Z" fill="currentColor" />
           </svg>
         </span>
-        <span v-if="!compact" class="brand-copy"><strong>{{ companyName }}</strong><small>Workspace</small></span>
+        <span v-if="!compact" class="brand-copy"><strong>{{ companyName }}</strong><small>{{ selectedApp ? `${selectedApp.label} workspace` : 'Workspace' }}</small></span>
       </RouterLink>
       <button v-if="showToggle && !compact" type="button" class="toggle" aria-label="Close sidebar" aria-controls="app-sidebar" aria-expanded="true" title="Close sidebar" @click="emit('toggleCollapse')">
         <PanelLeftClose :size="17" />
@@ -67,8 +69,12 @@ watch(() => route.fullPath, hideTip);
       </button>
     </div>
 
+    <WorkspaceSwitcher :compact="compact" @navigate="emit('navigate')" @tip="(label, event) => showTip(label, event, compact)" @hide-tip="hideTip" />
+
     <nav class="level-one-scroll" aria-label="Modules" @scroll="hideTip">
+      <!-- The ERPNext dashboard; the NGO app opens on its own Projects overview instead. -->
       <RouterLink
+        v-if="!selectedApp || selectedApp.key === 'erpnext'"
         to="/"
         :class="['overview', { active: route.path === '/', compact }]"
         :aria-current="route.path === '/' ? 'page' : undefined"
@@ -141,7 +147,7 @@ watch(() => route.fullPath, hideTip);
 .workspace-rule { width: 28px; height: 1px; flex: none; margin: 10px 0 6px; background: var(--nav-border); }
 
 .overview { position: relative; display: flex; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; align-items: center; gap: 12px; height: 40px; padding: 0 12px; color: var(--nav-muted); border-radius: 9px; font-size: 14px; font-weight: 500; transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
-.overview svg { flex: none; color: var(--nav-accent); }
+.overview svg { flex: none; color: var(--nav-fg); }
 .overview:hover { color: var(--nav-fg); background: var(--nav-hover); }
 .overview:focus-visible, .foot-link:focus-visible, .toggle:focus-visible, .brand:focus-visible { outline: 2px solid var(--nav-accent); outline-offset: -2px; }
 .overview.active { color: var(--nav-active-fg); background: var(--nav-active-bg); font-weight: 600; }

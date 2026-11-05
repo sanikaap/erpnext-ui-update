@@ -29,13 +29,15 @@ export interface Metric {
   spark?: number[];
   /** Token name for the sparkline color (default: the tile's tone). */
   sparkColor?: string;
+  /** Marks the headline figure of a KPI row: a soft tinted background instead of the plain card. */
+  lead?: boolean;
 }
 
 defineProps<{ metric: Metric }>();
 </script>
 
 <template>
-  <component :is="metric.to ? RouterLink : 'article'" :to="metric.to" :class="['metric-card', `kpi-tone-${metric.tone}`, { 'metric-card--link': metric.to }]" data-testid="card-metric">
+  <component :is="metric.to ? RouterLink : 'article'" :to="metric.to" :class="['metric-card', `kpi-tone-${metric.tone}`, { 'metric-card--link': metric.to, 'metric-card--lead': metric.lead }]" data-testid="card-metric">
     <div class="metric-top">
       <span v-if="metric.icon" class="metric-icon"><component :is="metric.icon" :size="18" :stroke-width="2" /></span>
       <span class="metric-label" :title="metric.label">{{ metric.label }}</span>
@@ -61,6 +63,8 @@ defineProps<{ metric: Metric }>();
 .metric-card { position: relative; display: flex; min-width: 0; flex-direction: column; padding: 18px 18px 16px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-md); transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-med) var(--ease), transform var(--dur-med) var(--ease); }
 .metric-card--link:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-ring-offset); }
 .metric-card--link:hover { border-color: color-mix(in srgb, var(--tone) 40%, var(--border)); box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+.metric-card--lead { border-color: color-mix(in srgb, var(--tone) 35%, var(--border)); background: linear-gradient(165deg, color-mix(in srgb, var(--tone) 10%, var(--surface)), var(--surface) 65%); }
+.metric-card--lead .metric-icon { background: color-mix(in srgb, var(--tone) 20%, transparent); }
 .metric-top { display: flex; min-width: 0; align-items: center; gap: 12px; }
 .metric-icon { display: grid; width: 40px; height: 40px; flex: none; place-items: center; color: var(--tone); border-radius: 50%; background: color-mix(in srgb, var(--tone) 12%, transparent); }
 .metric-label { min-width: 0; flex: 1; overflow: hidden; color: var(--foreground); font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }

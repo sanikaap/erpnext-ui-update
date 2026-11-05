@@ -212,7 +212,7 @@ const ngoModule = computed(() => modules.value.find((module) => module.key === '
 const ngoIcons = [PiggyBank, HandCoins, CircleDollarSign, HeartHandshake];
 const ngoMetrics = computed<Metric[]>(() => {
   if (!ngoModule.value) return [];
-  return (ngoOverview('ngo-projects')?.kpis ?? []).map((kpi, index) => ({ label: kpi.label, value: kpi.value, hint: kpi.hint, tone: kpi.tone, icon: ngoIcons[index % ngoIcons.length], to: ngoModule.value!.route, spark: kpi.spark }));
+  return (ngoOverview('ngo-projects')?.kpis ?? []).map((kpi, index) => ({ label: kpi.label, value: kpi.value, hint: kpi.hint, tone: kpi.tone, icon: ngoIcons[index % ngoIcons.length], to: ngoModule.value!.route, spark: kpi.spark, lead: kpi.lead }));
 });
 // Two headline NGO charts for the Overview, taken from the NGO Projects overview.
 const ngoPanels = computed(() => {

@@ -1,4 +1,4 @@
-import { CENTRES, CHILDREN, DOMAINS, DONORS, EXPENSES, HEADS, MONTHS, ORG, PROGRAMS, PROJECTS, RECEIPT_TREND, RECEIPTS, SPEND_TREND, TOTALS, byId, composite, donorCommitted, donorUtilised, flagOf } from './data';
+import { CENTRES, CHILDREN, DOMAINS, DONORS, EXPENSES, FIELD_TEAM, FY_HISTORY, HEADS, MONTHS, ORG, PROGRAMS, PROJECTS, RECEIPT_TREND, RECEIPTS, SPEND_TREND, TOTALS, byId, composite, donorCommitted, donorUtilised, flagOf } from './data';
 import type { StatusTone, ChartSegment } from '@/types/erp';
 import type { BudgetRow } from '@/components/charts/BudgetBars.vue';
 import type { TrendSeries } from '@/components/charts/TrendChart.vue';
@@ -55,6 +55,24 @@ const domainRadar = (title = 'Development domains'): OverviewPanel => {
 const roundMonths = CHILDREN[0].rounds.map((round) => round.m);
 const compositeByRound = () => roundMonths.map((_, index) => Math.round(CHILDREN.reduce((sum, child) => sum + composite(child.rounds[index].s), 0) / CHILDREN.length));
 
+/** Children reached, FY over FY — shows the three-year growth trajectory. */
+const growthPanel = (): OverviewPanel => ({
+  kind: 'bars', title: 'Growth over 3 years', note: 'Children reached per financial year', labels: FY_HISTORY.map((fy) => fy.short),
+  series: [{ name: 'Children reached', data: FY_HISTORY.map((fy) => fy.children), color: '--chart-1' }], barColors: slots(FY_HISTORY.length),
+});
+/** Funds utilised, FY over FY — same three years, money this time. */
+const fundsHistoryPanel = (): OverviewPanel => ({
+  kind: 'trend', title: 'Funds utilised over 3 years', note: 'Full-year actuals; current year is to date', labels: FY_HISTORY.map((fy) => fy.short),
+  series: [{ name: 'Funds utilised', data: FY_HISTORY.map((fy) => fy.used), color: '--chart-2' }],
+});
+/** Field team (Social Change Agents) ranked by children reached this FY. */
+const fieldTeamPanel = (): OverviewPanel => ({
+  kind: 'rank', title: 'Field team impact', note: 'Children reached per Social Change Agent',
+  rows: [...FIELD_TEAM].sort((a, b) => b.children - a.children).map((agent) => ({
+    key: agent.id, label: agent.name, value: agent.children, display: `${agent.children} children`, sub: `${agent.centre} · ${agent.sessionsYtd} sessions · ★ ${agent.rating}`,
+  })),
+});
+
 const outcomesPanel = (title = 'Outcomes against target'): OverviewPanel => ({
   kind: 'progress', title, note: 'Current value versus programme target', wide: true,
   rows: PROGRAMS.flatMap((programme) => programme.outcomes.map((outcome, index) => ({ label: outcome.n, detail: programme.name, value: outcome.c, target: outcome.t, unit: outcome.u, to: record('Impact Outcome', `${programme.id}-O${index + 1}`) }))).slice(0, 10),
@@ -78,6 +96,9 @@ export function ngoOverview(moduleId: string): NgoOverview | null {
           { kind: 'bars', title: 'Children reached by project', note: 'Enrolled across centres', labels: PROJECTS.map((project) => shortName(project.name)), series: [{ name: 'Children', data: PROJECTS.map((project) => project.children), color: '--chart-1' }], barColors: slots(PROJECTS.length) },
           headDonut('Spend by budget head'),
           monthlyByHead(),
+          growthPanel(),
+          fundsHistoryPanel(),
+          fieldTeamPanel(),
         ],
       };
     case 'programmes': {

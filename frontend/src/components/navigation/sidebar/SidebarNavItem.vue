@@ -32,7 +32,7 @@ const countLabel = computed(() => {
 .nav-item:hover .nav-item-icon { color: var(--nav-fg); }
 .nav-item:focus-visible { outline: 2px solid var(--nav-accent); outline-offset: -2px; }
 .nav-item.active { color: var(--nav-active-fg); background: var(--nav-active-bg); font-weight: 600; }
-.nav-item.active .nav-item-icon { color: var(--nav-accent); }
+.nav-item.active .nav-item-icon { color: var(--nav-fg); }
 .nav-item.active .nav-item-count { color: var(--nav-fg); background: var(--nav-hover); }
 .nav-item.active::before { position: absolute; top: 9px; bottom: 9px; left: 0; width: 3px; content: ''; border-radius: 0 3px 3px 0; background: var(--nav-accent); }
 </style>

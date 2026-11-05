@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { ChevronLeft, ChevronRight, Download, Plus, RefreshCw, Rows3, Rows4, Search, Trash2, X } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Download, Link2, Plus, RefreshCw, Rows3, Rows4, Search, Trash2, X } from 'lucide-vue-next';
 import { useRoute, useRouter } from 'vue-router';
 import { documentConfigs, routeFilters } from '@/config/navigation';
 import { getModuleForPath } from '@/app/module-registry';
@@ -10,9 +10,9 @@ import { useStatusTabs } from '@/composables/useStatusTabs';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
 import { documentApi } from '@/services/document-api';
-import { hasDocTypePermission } from '@/services/metadata-api';
+import { hasDocTypePermission, metaRegistry } from '@/services/metadata-api';
 import { isStaticDocType } from '@/services/static-data';
-import { frappeErrorMessage } from '@/services/erpnext-api';
+import { erpnextApi, frappeErrorMessage } from '@/services/erpnext-api';
 import { listViewFields, formatValue } from '@/lib/doctype';
 import DataTable from '@/components/data-display/DataTable.vue';
 import EmptyState from '@/components/feedback/EmptyState.vue';
@@ -37,9 +37,41 @@ const config = computed(() => documentConfigs[route.path]);
 const doctype = computed(() => config.value?.doctype || String(route.params.doctype || ''));
 const title = computed(() => config.value?.title || doctype.value);
 const module = computed(() => getModuleForPath(route.path, doctype.value));
-const fixedFilters = computed<Filter[]>(() => routeFilters[route.path] ?? []);
 
 const { meta, metadata, loading: metaLoading, error: metaError, errorKind, load: loadMeta } = useDocType(doctype);
+
+/**
+ * Filters from the URL (?customer=X or ?name=["in",[…]]), as used by Connections and form
+ * scripts. A field may live on a child table, e.g. Purchase Order Item's material_request.
+ */
+const STANDARD_FILTER_FIELDS = new Set(['name', 'owner', 'creation', 'modified', 'modified_by', 'docstatus']);
+const linkFilters = computed<Filter[]>(() => {
+  if (!metadata.value.length) return [];
+  const result: Filter[] = [];
+  for (const [fieldname, raw] of Object.entries(route.query)) {
+    if (typeof raw !== 'string' || !raw || fieldname.startsWith('_')) continue;
+    let owner: string | undefined;
+    if (!STANDARD_FILTER_FIELDS.has(fieldname) && !metadata.value.some((field) => field.fieldname === fieldname)) {
+      const table = metadata.value.find((field) => field.is_table && field.options && metaRegistry.get(field.options)?.fields?.some((child) => child.fieldname === fieldname));
+      if (!table) continue;
+      owner = table.options;
+    }
+    let operator = '=';
+    let value: unknown = raw;
+    if (raw.startsWith('[')) {
+      try { const parsed = JSON.parse(raw); if (Array.isArray(parsed) && parsed.length === 2) { operator = String(parsed[0]); value = parsed[1]; } } catch { /* a literal value */ }
+    }
+    result.push({ ...(owner ? { doctype: owner } : {}), fieldname, operator, value });
+  }
+  return result;
+});
+const fixedFilters = computed<Filter[]>(() => [...(routeFilters[route.path] ?? []), ...linkFilters.value]);
+const linkFilterLabel = computed(() => linkFilters.value.map((filter) => {
+  const owner = filter.doctype ? metaRegistry.get(filter.doctype)?.fields?.find((field) => field.fieldname === filter.fieldname) : metadata.value.find((field) => field.fieldname === filter.fieldname);
+  const label = owner?.label || (filter.fieldname === 'name' ? 'ID' : filter.fieldname);
+  return `${label}: ${Array.isArray(filter.value) ? filter.value.join(', ') : filter.value}`;
+}).join(' · '));
+function clearLinkFilters() { void router.replace({ path: route.path }); }
 
 // ---------- View state (Filters, Sorts, Columns), persisted per DocType for this viewer ----------
 const search = ref('');
@@ -214,6 +246,22 @@ function createRecord() {
 }
 
 const deleting = ref(false);
+/** Desk's list actions for submittable DocTypes; ERPNext validates each document and reports failures. */
+const isSubmittableList = computed(() => Boolean((metaRegistry.get(doctype.value) as { is_submittable?: number } | undefined)?.is_submittable));
+async function bulkTransition(action: 'submit' | 'cancel') {
+  const names = [...selected.value];
+  const verb = action === 'submit' ? 'Submit' : 'Cancel';
+  if (!(await confirm({ title: `${verb} ${names.length} ${names.length === 1 ? 'record' : 'records'}?`, message: action === 'submit' ? 'Submitted documents can only be cancelled and amended afterwards.' : 'ERPNext will reverse the ledger and stock entries of these documents.', confirmLabel: verb, tone: action === 'submit' ? 'secondary' : 'danger' }))) return;
+  try {
+    await erpnextApi.callPost('frappe.desk.doctype.bulk_update.bulk_update.submit_cancel_or_update_docs', { doctype: doctype.value, docnames: JSON.stringify(names), action });
+    toast.success(`${verb} started for ${names.length} ${names.length === 1 ? 'record' : 'records'}`);
+    selected.value = [];
+    refresh();
+  } catch (cause) {
+    toast.error(`${verb} failed`, frappeErrorMessage(cause));
+  }
+}
+
 async function deleteSelected() {
   const names = [...selected.value];
   if (!(await confirm({ title: `Delete ${names.length} ${names.length === 1 ? 'record' : 'records'}?`, message: 'ERPNext will permanently delete them. Submitted documents must be cancelled first.', confirmLabel: 'Delete', tone: 'danger' }))) return;
@@ -268,6 +316,8 @@ function clearCriteria() {
       </div>
     </section>
 
+    <p v-if="linkFilters.length" class="link-filter-note"><Link2 :size="14" /><span>Linked records · {{ linkFilterLabel }}</span><button type="button" aria-label="Show all records" title="Show all records" @click="clearLinkFilters"><X :size="14" /></button></p>
+
     <section class="list-card">
       <ErrorState v-if="metaError" :kind="errorKind" :message="metaError" @retry="loadMeta" />
       <template v-else>
@@ -314,6 +364,8 @@ function clearCriteria() {
             <button type="button" class="bulk-link" @click="selected = []">Clear</button>
             <span class="bulk-spacer" />
             <BaseButton v-if="canExport" variant="quiet" size="sm" @click="exportCsv"><Download :size="14" />Export CSV</BaseButton>
+            <BaseButton v-if="isSubmittableList" variant="quiet" size="sm" @click="bulkTransition('submit')">Submit</BaseButton>
+            <BaseButton v-if="isSubmittableList" variant="quiet" size="sm" @click="bulkTransition('cancel')">Cancel</BaseButton>
             <BaseButton v-if="canDelete" variant="danger" size="sm" :loading="deleting" @click="deleteSelected"><Trash2 :size="14" />Delete</BaseButton>
           </div>
         </Transition>
@@ -326,7 +378,7 @@ function clearCriteria() {
             :columns="displayColumns"
             :rows="rows"
             :loading="loading || metaLoading"
-            :selectable="canDelete || canExport"
+            :selectable="canDelete || canExport || isSubmittableList"
             :title-field="meta?.title_field"
             :image-field="meta?.image_field"
             :submittable="Boolean(meta?.is_submittable)"
@@ -372,6 +424,10 @@ function clearCriteria() {
 </template>
 
 <style scoped>
+.link-filter-note { display: flex; align-items: center; gap: 8px; padding: 8px 12px; color: var(--primary-soft-foreground); border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent); border-radius: var(--radius-md); background: var(--primary-softer); font-size: 12.5px; }
+.link-filter-note span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-filter-note button { display: grid; width: 22px; height: 22px; flex: none; margin-left: auto; place-items: center; color: inherit; border: 0; border-radius: var(--radius-sm); background: none; }
+.link-filter-note button:hover { background: var(--primary-soft); }
 .demo-note { display: inline-flex; margin-top: 8px; padding: 3px 10px; color: var(--accent-soft-foreground); border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 999px; background: var(--accent-soft); font-size: 11.5px; font-weight: 600; }
 .list-eyebrow { display: flex; align-items: center; gap: 7px; }
 .module-dot { width: 8px; height: 8px; border-radius: 3px; background: var(--module-color, var(--primary)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-color, var(--primary)) 18%, transparent); }

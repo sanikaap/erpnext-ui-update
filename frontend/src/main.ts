@@ -3,6 +3,9 @@ import { createPinia } from 'pinia';
 import App from './App.vue';
 import router from './router';
 import './index.css';
+import { installCsrfFetch } from '@/services/csrf';
+
+installCsrfFetch();
 
 const app = createApp(App);
 app.use(createPinia());

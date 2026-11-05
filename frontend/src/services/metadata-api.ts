@@ -25,6 +25,22 @@ export interface DocField {
   columns?: number;
   length?: number;
   permlevel?: number;
+  allow_on_submit?: number;
+  no_copy?: number;
+  link_filters?: string;
+  [key: string]: unknown;
+}
+
+/** A DocType's Connections definition (its <doctype>_dashboard.py). */
+export interface DocTypeDashboard {
+  fieldname?: string;
+  non_standard_fieldnames?: Record<string, string>;
+  internal_links?: Record<string, string | string[]>;
+  internal_and_external_links?: Record<string, string | string[]>;
+  dynamic_links?: Record<string, [string, string]>;
+  transactions?: Array<{ label?: string; items: string[] }>;
+  reports?: Array<{ label?: string; items: string[] }>;
+  method?: string;
 }
 
 export interface DocTypeMeta {
@@ -41,9 +57,19 @@ export interface DocTypeMeta {
   track_changes?: number;
   image_field?: string;
   autoname?: string;
+  default_print_format?: string;
+  allow_rename?: number;
+  __js?: string;
+  __custom_js?: string;
+  __css?: string;
+  __templates?: Record<string, string>;
+  __dashboard?: DocTypeDashboard;
+  __print_formats?: Array<{ name: string }>;
+  __workflow_docs?: Array<{ name: string; workflow_state_field?: string; document_type?: string; is_active?: number }>;
   fields: DocField[];
   permissions?: Array<{
     role: string;
+    permlevel?: number;
     read?: number;
     write?: number;
     create?: number;
@@ -64,12 +90,15 @@ export interface DocTypeMeta {
 // Metadata rarely changes during a session; Desk caches it the same way.
 // The cache stores promises so concurrent callers share one request.
 const metaCache = new Map<string, Promise<DocTypeMeta>>();
+/** Every DocType loaded so far, for synchronous reads (form scripts' frappe.get_meta). */
+export const metaRegistry = new Map<string, DocTypeMeta>();
 
 function loadBundle(doctype: string): Promise<DocTypeMeta> {
   const pending = erpnextApi.getMetaBundle(doctype).then((docs: DocTypeMeta[]) => {
     // The bundle also carries each child table's metadata: cache those too,
     // so child tables render without another round trip.
     for (const doc of docs) {
+      metaRegistry.set(doc.name, doc);
       if (doc.name !== doctype && !metaCache.has(doc.name)) metaCache.set(doc.name, Promise.resolve(doc));
     }
     const meta = docs.find((doc) => doc.name === doctype) ?? docs[0];
@@ -89,7 +118,7 @@ export async function getDocTypeMetadata(
   doctype: string
 ): Promise<DocTypeMeta> {
   const local = staticMeta(doctype);
-  if (local) return local;
+  if (local) { metaRegistry.set(doctype, local); return local; }
   return metaCache.get(doctype) ?? loadBundle(doctype);
 }
 

@@ -27,6 +27,8 @@ function humanize(fieldname: string) {
 export function normalizeField(field: DocField): ERPNextMetadataField {
   const precision = field.precision === undefined || field.precision === '' ? undefined : Number(field.precision);
   return {
+    // Keep every other DocField property: form scripts read and set them directly.
+    ...field,
     fieldname: field.fieldname,
     label: field.label || humanize(field.fieldname),
     label_missing: !field.label,
@@ -254,7 +256,10 @@ export function resolveDefault(field: ERPNextMetadataField, context: DefaultCont
 }
 
 export function selectOptions(field: Pick<ERPNextMetadataField, 'options'>) {
-  return (field.options || '').split('\n').map((option) => option.trim()).filter((option, index, all) => option !== '' || (index === 0 && all.length > 1));
+  // Form scripts may set options as a list (of values or {label, value}), not only as text.
+  const raw: unknown = field.options;
+  if (Array.isArray(raw)) return raw.map((option) => String(option && typeof option === 'object' ? (option as { value?: unknown }).value ?? '' : option ?? ''));
+  return String(raw || '').split('\n').map((option) => option.trim()).filter((option, index, all) => option !== '' || (index === 0 && all.length > 1));
 }
 
 export function newDocument(doctype: string, fields: ERPNextMetadataField[], context: DefaultContext = {}): FrappeDocument {
@@ -271,14 +276,17 @@ export function newDocument(doctype: string, fields: ERPNextMetadataField[], con
 let rowCounter = 0;
 
 export function newChildRow(childDoctype: string, fields: ERPNextMetadataField[], parent: { doctype: string; fieldname: string; idx: number }, context: DefaultContext = {}) {
+  const key = `new-row-${Date.now().toString(36)}-${(rowCounter += 1)}`;
   const row: Record<string, unknown> = {
+    // Local name until the server assigns one: scripts address rows as locals[cdt][cdn].
+    name: `new-${childDoctype.toLowerCase().replace(/ /g, '-')}-${key}`,
     doctype: childDoctype,
     parenttype: parent.doctype,
     parentfield: parent.fieldname,
     idx: parent.idx,
     __islocal: 1,
     // Stable key for rendering before Frappe assigns a name on save.
-    __key: `new-row-${Date.now().toString(36)}-${(rowCounter += 1)}`,
+    __key: key,
   };
   for (const field of fields) {
     if (NO_VALUE_TYPES.has(field.fieldtype)) continue;
@@ -300,11 +308,13 @@ export interface FieldState {
 
 export function fieldState(field: ERPNextMetadataField, doc: Record<string, unknown>, options: { parent?: Record<string, unknown>; readOnly?: boolean; context?: ExpressionContext } = {}): FieldState {
   const visible = !field.hidden && evaluateCondition(field.depends_on, doc, options.parent, options.context);
-  const submitted = Number(doc.docstatus ?? 0) > 0;
-  const readOnly = Boolean(options.readOnly)
+  const status = Number(doc.docstatus ?? 0);
+  // Submitted documents are frozen, except fields marked "Allow on Submit".
+  const locked = status === 2 || (status === 1 && !field.allow_on_submit);
+  const readOnly = Boolean(options.readOnly
     || field.read_only
-    || submitted
-    || (field.read_only_depends_on ? evaluateCondition(field.read_only_depends_on, doc, options.parent, options.context) : false);
+    || locked
+    || (field.read_only_depends_on ? evaluateCondition(field.read_only_depends_on, doc, options.parent, options.context) : false));
   const required = field.reqd || (field.mandatory_depends_on ? evaluateCondition(field.mandatory_depends_on, doc, options.parent, options.context) : false);
   return { visible, required: Boolean(required) && !field.read_only, readOnly };
 }
@@ -359,7 +369,7 @@ export function validateDocument(
 export function listViewFields(fields: ERPNextMetadataField[], options: { limit?: number; titleField?: string } = {}) {
   const limit = options.limit ?? 6;
   const valueFields = fields.filter((field) => !NO_VALUE_TYPES.has(field.fieldtype) && !TABLE_TYPES.has(field.fieldtype) && !LONG_TEXT_TYPES.has(field.fieldtype));
-  let chosen = valueFields.filter((field) => field.in_list_view);
+  let chosen = valueFields.filter((field) => field.in_list_view && !field.hidden);
   if (!chosen.length) chosen = valueFields.filter((field) => field.reqd && !field.hidden);
   if (!chosen.length) chosen = valueFields.filter((field) => !field.hidden).slice(0, 4);
   if (options.titleField) {

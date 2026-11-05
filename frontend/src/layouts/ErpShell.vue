@@ -6,6 +6,7 @@ import Topbar from '@/components/navigation/Topbar.vue';
 import Breadcrumbs from '@/components/navigation/Breadcrumbs.vue';
 import ToastHost from '@/components/feedback/ToastHost.vue';
 import ConfirmHost from '@/components/feedback/ConfirmHost.vue';
+import DeskHost from '@/components/desk/DeskHost.vue';
 import { useLayoutStore } from '@/stores/layout';
 
 const route = useRoute();
@@ -30,6 +31,7 @@ watch(() => route.fullPath, () => { layout.mobileSidebarOpen = false; });
     </div>
     <ToastHost />
     <ConfirmHost />
+    <DeskHost />
   </div>
 </template>
 

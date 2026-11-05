@@ -504,6 +504,14 @@ input[type=checkbox], input[type=radio] { accent-color: var(--primary); }
   --mod-support: #e39a62; --mod-quality: #7cc98b; --mod-setup: #a9bdbb;
 }
 
+/* Sidebar icons and labels: whitesmoke throughout (overrides the module hues above). */
+.sidebar {
+  --nav-fg: whitesmoke; --nav-muted: whitesmoke; --nav-subtle: whitesmoke; --nav-active-fg: whitesmoke;
+  --mod-crm: whitesmoke; --mod-selling: whitesmoke; --mod-buying: whitesmoke; --mod-accounts: whitesmoke;
+  --mod-stock: whitesmoke; --mod-manufacturing: whitesmoke; --mod-projects: whitesmoke; --mod-assets: whitesmoke;
+  --mod-support: whitesmoke; --mod-quality: whitesmoke; --mod-setup: whitesmoke;
+}
+
 /* ============================================================
    Shared building blocks (one implementation each)
    ============================================================ */
@@ -552,6 +560,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--primary); }
 }
 .menu-item svg { flex: none; color: var(--icon-foreground); }
 .menu-item:hover { background: var(--muted); }
+.menu-current-app { margin-left: auto; padding: 1px 7px; color: var(--muted-foreground); border-radius: 999px; background: var(--muted); font-size: 11px; font-weight: 500; }
 .menu-item:hover svg { color: var(--primary); }
 .menu-item:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
 .menu-item--danger, .menu-item--danger svg { color: var(--danger); }
@@ -591,3 +600,19 @@ input[type=checkbox], input[type=radio] { accent-color: var(--primary); }
 @container (max-width: 900px) { .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dash-main, .dash-two { grid-template-columns: minmax(0, 1fr); } }
 @container (max-width: 640px) { .dash-three { grid-template-columns: minmax(0, 1fr); } }
 @container (max-width: 440px) { .dash-kpis { grid-template-columns: 1fr; } }
+
+/* Markup that form scripts write into HTML fields (Desk's document picker, address and contact lists). */
+.desk-html { color: var(--foreground); font-size: 13px; }
+.desk-pick { width: 100%; border-collapse: collapse; font-size: 13px; }
+.desk-pick th { padding: 7px 8px; color: var(--subtle-foreground); border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 11.5px; font-weight: 600; text-align: left; white-space: nowrap; }
+.desk-pick td { padding: 7px 8px; border-bottom: 1px solid var(--border); }
+.desk-pick input { accent-color: var(--primary); }
+.desk-pick-name { font-weight: 500; }
+.desk-pick-empty { padding: 20px 8px !important; color: var(--muted-foreground); text-align: center; }
+.desk-party-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.desk-party-card { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; color: var(--foreground); border: 1px solid var(--border); border-radius: var(--radius-md); text-decoration: none; }
+.desk-party-card:hover { border-color: var(--primary); background: var(--primary-softer); }
+.desk-party-card span { color: var(--muted-foreground); font-size: 12.5px; }
+.desk-party-empty { color: var(--muted-foreground); }
+.desk-party-new { padding: 0; color: var(--primary); border: 0; background: none; font-size: 13px; font-weight: 500; }
+.desk-party-new:hover { text-decoration: underline; }

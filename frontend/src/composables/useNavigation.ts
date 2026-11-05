@@ -2,6 +2,7 @@ import { computed, ref } from 'vue';
 import { documentApi } from '@/services/document-api';
 import { isStaticDocType, staticDocTypeNames } from '@/services/static-data';
 import { moduleRegistry, type ModuleDefinition } from '@/app/module-registry';
+import { selectedApp } from '@/app/app-context';
 import type { NavigationItem } from '@/types/erp';
 
 /*
@@ -61,6 +62,8 @@ export function useNavigation() {
   }
 
   const modules = computed<VisibleModule[]>(() => moduleRegistry
+    // Only the modules of the app chosen after sign-in (ERPNext or NGO).
+    .filter((module) => !selectedApp.value || module.workspace === selectedApp.value.workspace)
     // Until the check finishes, modules that depend on an optional app stay hidden (no flash).
     .filter((module) => (loaded.value ? module.requires.every((name) => installedDoctypes.value?.has(name) ?? true) : !module.requires.length))
     .map((module) => ({

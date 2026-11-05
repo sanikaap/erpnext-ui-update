@@ -27,7 +27,8 @@ export default defineConfig(({ mode }) => {
           target: frappeTarget,
           changeOrigin: true,
         },
-        "/assets": {
+        // Frappe's static files only: /assets/register and friends are this app's Assets module pages.
+        "^/assets/(frappe|erpnext|modern_erp_ui|assets\\.json)": {
           target: frappeTarget,
           changeOrigin: true,
         },

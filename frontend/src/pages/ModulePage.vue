@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { ArrowRight, ArrowUpRight, BarChart3, CircleDot, Clock3, FileSpreadsheet, Layers3, List, Plus, TrendingUp } from 'lucide-vue-next';
+import { ArrowRight, ArrowUpRight, BarChart3, Building2, CircleDollarSign, CircleDot, Clock3, FileSpreadsheet, HandCoins, HeartHandshake, Layers3, List, Plus, TrendingUp, Users } from 'lucide-vue-next';
 import { RouterLink, useRouter } from 'vue-router';
 import { useRoute } from 'vue-router';
 import { useNavigation } from '@/composables/useNavigation';
@@ -27,6 +27,7 @@ import DonutChart from '@/components/charts/DonutChart.vue';
 import RadarChart from '@/components/charts/RadarChart.vue';
 import { useSessionDefaults } from '@/composables/useSessionDefaults';
 import { ngoOverview, lakh } from '@/ngo/overview';
+import { CENTRES, ORG, TOTALS } from '@/ngo/data';
 import { compactCurrency, formatDate, relativeTime } from '@/lib/doctype';
 import { getDocumentRouteForDocType } from '@/config/navigation';
 import type { StatusTone } from '@/types/erp';
@@ -115,9 +116,11 @@ function weeklyChange(weeks: number[] | undefined): Pick<Metric, 'delta' | 'tren
   return { delta: `${Math.abs(percent).toFixed(0)}%`, trend: Math.abs(percent) < 1 ? 'flat' : percent > 0 ? 'up' : 'down' };
 }
 
+// NGO KPI tiles cycle through a small set of cause-themed icons instead of repeating the module icon.
+const ngoKpiIcons = [HandCoins, CircleDollarSign, HeartHandshake, Users];
 /** KPI strip as MetricCard tiles: NGO figures from the dataset, ERPNext counts live. */
 const kpiMetrics = computed<Metric[]>(() => {
-  if (ngo.value) return ngo.value.kpis.map((kpi) => ({ label: kpi.label, value: kpi.value, hint: kpi.hint, tone: kpi.tone, spark: kpi.spark, icon: module.value?.icon }));
+  if (ngo.value) return ngo.value.kpis.map((kpi, index) => ({ label: kpi.label, value: kpi.value, hint: kpi.hint, tone: kpi.tone, spark: kpi.spark, icon: ngoKpiIcons[index % ngoKpiIcons.length], lead: kpi.lead }));
   return dashboard.kpis.value.map((kpi) => {
     const spark = kpiSpark(kpi.doctype);
     const hasSpark = Boolean(spark?.some(Boolean));
@@ -177,6 +180,11 @@ const quickActions = computed<QuickAction[]>(() => {
   return actions.slice(0, 4);
 });
 const subtitle = computed(() => (module.value ? `Here's what's happening in ${module.value.label}.` : ''));
+
+// ---------- NGO hero band (org identity, shown above every NGO module's Overview) ----------
+const ngoUtilisation = computed(() => (TOTALS.budget ? Math.round((TOTALS.used / TOTALS.budget) * 100) : 0));
+/** Each panel kind gets its own accent colour, so the NGO grid reads as more than one chart repeated six times. */
+const panelAccent = (kind: string) => `panel-accent-${kind}`;
 </script>
 
 <template>
@@ -190,6 +198,22 @@ const subtitle = computed(() => (module.value ? `Here's what's happening in ${mo
         <BaseButton v-if="canCreate && primaryDoctype" variant="primary" size="md" @click="router.push({ name: 'document-create', params: { doctype: primaryDoctype } })"><Plus :size="15" />New {{ primaryDoctype }}</BaseButton>
       </DashboardHeader>
 
+      <section v-if="ngo" class="ngo-hero" aria-label="Organisation overview">
+        <div class="ngo-hero-id">
+          <span class="ngo-hero-icon"><HeartHandshake :size="22" /></span>
+          <div>
+            <h2>{{ ORG.name }}</h2>
+            <p>{{ ORG.city }} · {{ ORG.fy }}</p>
+          </div>
+        </div>
+        <dl class="ngo-hero-stats">
+          <div><dt>Children reached</dt><dd class="tabular">{{ TOTALS.children.toLocaleString('en-IN') }}</dd></div>
+          <div><dt>Active centres</dt><dd class="tabular">{{ CENTRES.length }}</dd></div>
+          <div><dt>Funded projects</dt><dd class="tabular">{{ TOTALS.projects }}</dd></div>
+          <div><dt>Fund utilisation</dt><dd class="tabular">{{ ngoUtilisation }}%</dd></div>
+        </dl>
+      </section>
+
       <section v-if="kpiMetrics.length || (!ngo && dashboard.loading.value)" class="dash-kpis">
         <template v-if="!ngo && dashboard.loading.value && !kpiMetrics.length"><span v-for="index in 4" :key="index" class="skeleton kpi-skeleton" /></template>
         <MetricCard v-for="(metric, index) in kpiMetrics" :key="metric.label" :metric="metric" :class="['stagger-in', `delay-${Math.min(index + 1, 4)}`]" />
@@ -197,7 +221,7 @@ const subtitle = computed(() => (module.value ? `Here's what's happening in ${mo
 
       <!-- NGO modules: their own panel set (demo dataset). -->
       <section v-if="ngo" class="dash-grid">
-        <PanelCard v-for="panel in ngo.panels" :key="panel.title" :title="panel.title" :eyebrow="panel.note" :class="{ 'panel--wide': 'wide' in panel && panel.wide }">
+        <PanelCard v-for="panel in ngo.panels" :key="panel.title" :title="panel.title" :eyebrow="panel.note" :class="[panelAccent(panel.kind), { 'panel--wide': 'wide' in panel && panel.wide }]">
           <TrendChart v-if="panel.kind === 'trend'" :labels="panel.labels" :series="panel.series" type="line" :height="230" :format-value="money" />
           <SegmentedBar v-else-if="panel.kind === 'segments'" :segments="panel.segments" :label="panel.title" />
           <DonutChart v-else-if="panel.kind === 'donut'" :segments="panel.segments" :label="panel.title" :center-label="panel.centerLabel" :center-value="panel.centerValue" :size="180" />
@@ -298,10 +322,34 @@ const subtitle = computed(() => (module.value ? `Here's what's happening in ${mo
 .demo-tag { padding: 1px 8px; color: var(--accent-soft-foreground); border-radius: 999px; background: var(--accent-soft); font-size: 11.5px; font-weight: 600; }
 .kpi-skeleton { height: 150px; border-radius: var(--radius-xl); }
 
+/* NGO hero band: org identity + headline scale, shown above the KPI row on every NGO module page. */
+.ngo-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 22px; border: 1px solid var(--border); border-radius: var(--radius-xl); background: linear-gradient(135deg, color-mix(in srgb, var(--secondary) 12%, var(--surface)), var(--surface) 70%); box-shadow: var(--shadow-md); }
+.ngo-hero-id { display: flex; min-width: 0; align-items: center; gap: 12px; }
+.ngo-hero-icon { display: grid; width: 44px; height: 44px; flex: none; place-items: center; color: var(--secondary-soft-foreground); border-radius: var(--radius-lg); background: var(--secondary-soft); }
+.ngo-hero-id h2 { overflow: hidden; color: var(--foreground); font-size: 16px; font-weight: 700; letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
+.ngo-hero-id p { margin-top: 2px; color: var(--subtle-foreground); font-size: 12.5px; }
+.ngo-hero-stats { display: flex; flex-wrap: wrap; margin: 0; }
+.ngo-hero-stats div { padding: 0 18px; }
+.ngo-hero-stats div + div { border-left: 1px solid var(--border); }
+.ngo-hero-stats dt { color: var(--subtle-foreground); font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.ngo-hero-stats dd { margin: 2px 0 0; color: var(--foreground); font-family: var(--font-display); font-size: 19px; font-weight: 700; }
+@media (max-width: 720px) { .ngo-hero-stats { gap: 2px 0; } .ngo-hero-stats div { padding: 0 14px 0 0; } .ngo-hero-stats div + div { padding-left: 14px; } }
+
 /* Panels (PanelCard) */
 .dash-grid { display: grid; grid-auto-flow: row dense; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 14px; }
 .panel--wide { grid-column: 1 / -1; }
 .trend-summary { display: flex; flex-wrap: wrap; gap: 10px 32px; margin-bottom: 10px; }
+
+/* NGO panels: a thin top accent per chart kind, so the grid reads as varied content, not six repeats. */
+.dash-grid .panel-card { position: relative; }
+.dash-grid .panel-card::before { position: absolute; top: 1px; right: 1px; left: 1px; height: 3px; content: ''; border-radius: calc(var(--radius-xl) - 1px) calc(var(--radius-xl) - 1px) 0 0; background: var(--ngo-accent, var(--secondary)); opacity: .9; }
+.panel-accent-trend { --ngo-accent: linear-gradient(90deg, var(--chart-1), var(--chart-2)); }
+.panel-accent-donut { --ngo-accent: var(--chart-3); }
+.panel-accent-bars { --ngo-accent: var(--chart-4); }
+.panel-accent-radar { --ngo-accent: var(--chart-5); }
+.panel-accent-rank { --ngo-accent: var(--chart-6); }
+.panel-accent-segments { --ngo-accent: var(--accent); }
+.panel-accent-progress { --ngo-accent: linear-gradient(90deg, var(--warning), var(--success)); }
 
 .progress-list { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; list-style: none; }
 .progress-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }

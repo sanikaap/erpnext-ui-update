@@ -195,6 +195,28 @@ export const TOTALS = (() => {
   return { budget, used, received, available: received - used, children: PROJECTS.reduce((sum, project) => sum + project.children, 0), programmes: PROGRAMS.length, projects: PROJECTS.length, centres: CENTRES.length };
 })();
 
+// ------------------------------------------------------------------ field team (Social Change Agents)
+// One agent per centre, matching the "sca" name already on each Centre record.
+export interface FieldAgent { id: string; name: string; centre: string; children: number; sessionsYtd: number; trainingHrs: number; rating: number }
+export const FIELD_TEAM: FieldAgent[] = CENTRES.map((centre, index) => ({
+  id: `SCA-0${index + 1}`,
+  name: centre.sca,
+  centre: centre.name,
+  children: centre.children,
+  sessionsYtd: [184, 171, 158, 146][index] ?? 140,
+  trainingHrs: [36, 28, 32, 24][index] ?? 24,
+  rating: [4.8, 4.6, 4.7, 4.5][index] ?? 4.5,
+}));
+
+// ------------------------------------------------------------------ three-year history
+// Prior years are illustrative actuals; the current FY is the TOTALS figures above, "to date".
+export interface FyHistory { fy: string; short: string; children: number; budget: number; used: number }
+export const FY_HISTORY: FyHistory[] = [
+  { fy: 'FY 2024–25', short: '2024–25', children: 612, budget: 6800000, used: 6150000 },
+  { fy: 'FY 2025–26', short: '2025–26', children: 894, budget: 8400000, used: 7960000 },
+  { fy: ORG.fy, short: ORG.fy.replace('FY ', ''), children: TOTALS.children, budget: TOTALS.budget, used: TOTALS.used },
+];
+
 const MONTH_INDEX: Record<string, string> = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
 /** "01 Apr 2026" → "2026-04-01"; anything else is returned unchanged. */
 export function isoDate(value: string) {

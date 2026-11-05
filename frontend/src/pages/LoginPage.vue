@@ -5,6 +5,7 @@ import { Boxes, LogIn, ShieldCheck, Workflow } from 'lucide-vue-next';
 import { authApi } from '@/services/auth-api';
 import { FrappeApiError } from '@/services/erpnext-api';
 import { markAuthenticated } from '@/router/auth-guard';
+import { clearSelectedApp } from '@/app/app-context';
 import BaseButton from '@/components/ui/BaseButton.vue';
 
 const route = useRoute();
@@ -20,8 +21,10 @@ async function submit() {
   try {
     await authApi.login(username.value, password.value);
     markAuthenticated();
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/';
-    await router.replace(redirect);
+    // Every sign-in starts on the app picker (ERPNext or NGO).
+    clearSelectedApp();
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '';
+    await router.replace({ name: 'select-app', query: redirect && redirect !== '/' ? { redirect } : {} });
   } catch (cause) {
     error.value = cause instanceof FrappeApiError && cause.status === 401
       ? 'Incorrect username or password.'

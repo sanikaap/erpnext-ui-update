@@ -137,6 +137,20 @@ export const documentApi = {
   },
 
   /**
+   * Save through the endpoint Desk uses. It resolves local row names ("new-…") and
+   * supports every action: Save, Submit, and Update (Allow on Submit edits).
+   */
+  async saveDocs<T = FrappeDocument>(
+    doc: Record<string, unknown>,
+    action: "Save" | "Submit" | "Update"
+  ): Promise<T | undefined> {
+    if (isStaticDocType(String(doc.doctype))) throw new StaticReadOnlyError(String(doc.doctype));
+    const response = await erpnextApi.saveDocs<T>(doc, action);
+
+    return response.docs?.[0];
+  },
+
+  /**
    * Submit a document.
    *
    * The document must contain the required fields
@@ -210,7 +224,7 @@ export const documentApi = {
   async searchLink(
     doctype: string,
     txt: string,
-    options: { filters?: unknown; pageLength?: number; referenceDoctype?: string } = {}
+    options: { filters?: unknown; pageLength?: number; referenceDoctype?: string; query?: string } = {}
   ) {
     if (isStaticDocType(doctype)) return staticSearch(doctype, txt, options.pageLength);
     const response = await erpnextApi.searchLink(doctype, txt, options);
@@ -308,7 +322,7 @@ export async function listDocuments<T = FrappeDocument>(
   const filters: unknown[][] = (params.filters ?? [])
     .filter((filter) => filter.value !== "" && filter.value !== undefined && filter.value !== null)
     .map((filter) => [
-      params.doctype,
+      filter.doctype ?? params.doctype,
       filter.fieldname,
       filter.operator,
       filter.operator === "like" ? `%${filter.value}%` : filter.value,

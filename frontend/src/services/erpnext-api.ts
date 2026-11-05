@@ -485,6 +485,27 @@ export const erpnextApi = {
 
 
   // ----------------------------------------------------------
+  // Save / Submit / Update, as Desk does
+  // ----------------------------------------------------------
+
+  saveDocs<T = any>(
+    doc: Record<string, any>,
+    action: string
+  ) {
+
+    return request<{ docs?: T[]; _server_messages?: string }>(
+      "/method/frappe.desk.form.save.savedocs",
+      {
+        method: "POST",
+
+        body:
+          JSON.stringify({ doc: JSON.stringify(doc), action }),
+      }
+    );
+  },
+
+
+  // ----------------------------------------------------------
   // Submit
   // ----------------------------------------------------------
 

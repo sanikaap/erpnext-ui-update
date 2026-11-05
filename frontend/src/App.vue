@@ -8,6 +8,6 @@ useTheme();
 </script>
 
 <template>
-  <RouterView v-if="route.meta.public" />
+  <RouterView v-if="route.meta.public || route.meta.bare" />
   <ErpShell v-else />
 </template>
