@@ -1,4 +1,4 @@
-# Modern ERP UI
+# Modern ERP UI - Vaishalis
 
 A modern Vue 3 interface for ERPNext, packaged as a Frappe app. The backend is the `modern_erp_ui` app and the interface lives in `frontend/`.
 
